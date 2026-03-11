@@ -300,3 +300,36 @@ export const api = {
   getEscalations: (page = 1, status = "") =>
     get<PaginatedResponse<EscalationTicket>>(`/channels/escalations?page=${page}&page_size=20${status ? `&status=${status}` : ""}`),
 };
+
+// ---------- Knowledge Graph API (separate base path) ----------
+
+export interface GraphStats {
+  nodes: Record<string, number>;
+  edges: Record<string, number>;
+}
+
+export interface GraphSearchResult {
+  results: Record<string, unknown>[];
+  total: number;
+  query: string;
+}
+
+export function getGraphStats() {
+  return request<GraphStats>("/graph/stats");
+}
+
+export function searchGraphParts(query: string, limit = 20) {
+  return request<GraphSearchResult>(`/graph/parts/search/fulltext?q=${encodeURIComponent(query)}&limit=${limit}`);
+}
+
+export function getGraphPart(sku: string) {
+  return request<Record<string, unknown>>(`/graph/parts/${encodeURIComponent(sku)}`);
+}
+
+export function getGraphCrossRefs(sku: string) {
+  return request<{ sku: string; cross_references: Record<string, unknown>[] }>(`/graph/parts/${encodeURIComponent(sku)}/cross-refs`);
+}
+
+export function getGraphBOM(model: string) {
+  return request<{ assembly: string; components: Record<string, unknown>[] }>(`/graph/assemblies/${encodeURIComponent(model)}/bom`);
+}

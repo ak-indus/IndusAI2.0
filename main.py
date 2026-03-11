@@ -73,6 +73,19 @@ from services.platform.rma_service import RMAService
 from services.platform.analytics_service import AnalyticsService
 from routes.platform import router as platform_router, set_services
 
+# Knowledge Graph & GraphRAG
+from services.graph.neo4j_client import Neo4jClient
+from services.graph.graph_service import GraphService
+from services.graph.sync import GraphSyncService
+from services.graph.tds_sds_service import TDSSDSGraphService
+from services.ai.claude_client import ClaudeClient
+from services.ai.embedding_client import VoyageEmbeddingClient
+from services.ai.llm_router import LLMRouter
+from services.ai.entity_extractor import EntityExtractor
+from services.ai.part_number_parser import PartNumberParser
+from services.graphrag.query_engine import GraphRAGQueryEngine
+from routes.graph import router as graph_router, set_graph_services
+
 # ---------------------------------------------------------------------------
 # Environment
 # ---------------------------------------------------------------------------
@@ -161,6 +174,14 @@ class Settings(BaseSettings):
 
     # Rate limiting
     rate_limit_per_minute: int = Field(default=60)
+
+    # Knowledge Graph (Neo4j)
+    neo4j_uri: str = Field(default="bolt://localhost:7687")
+    neo4j_user: str = Field(default="neo4j")
+    neo4j_password: str = Field(default="password")
+
+    # Voyage AI (embeddings)
+    voyage_api_key: Optional[str] = Field(default=None)
 
     @field_validator('secret_key')
     @classmethod
@@ -253,6 +274,79 @@ invoice_service = InvoiceService(db_manager, customer_service, logger)
 rma_service = RMAService(db_manager, inventory_service, workflow_engine, logger)
 analytics_service = AnalyticsService(db_manager, logger)
 
+# Knowledge Graph services — initialised in lifespan after Neo4j connects
+neo4j_client = Neo4jClient(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password)
+graph_service = GraphService(neo4j_client)
+tds_sds_service = TDSSDSGraphService(neo4j_client)
+
+# AI services for GraphRAG
+_claude_client = None
+_embedding_client = None
+_llm_router = None
+_query_engine = None
+
+if settings.anthropic_api_key:
+    _claude_client = ClaudeClient(
+        api_key=settings.anthropic_api_key,
+        max_retries=settings.ai_max_retries,
+        retry_delay=settings.ai_retry_delay,
+        circuit_breaker_threshold=settings.circuit_breaker_threshold,
+        circuit_breaker_timeout=settings.circuit_breaker_timeout,
+    )
+
+if settings.voyage_api_key:
+    _embedding_client = VoyageEmbeddingClient(api_key=settings.voyage_api_key)
+
+if _claude_client:
+    _llm_router = LLMRouter(
+        claude_client=_claude_client,
+        embedding_client=_embedding_client,
+    )
+
+_entity_extractor = EntityExtractor()
+_part_parser = PartNumberParser()
+graph_sync = GraphSyncService(graph_service, _embedding_client)
+
+# Intent classifier adapter for GraphRAG (bridges old IntentClassifier → AI models)
+class _GraphIntentClassifier:
+    """Adapts the LLM router to classify intents for the GraphRAG pipeline."""
+    def __init__(self, llm_router):
+        self._llm = llm_router
+
+    async def classify_intent(self, message: str):
+        from services.ai.models import IntentResult, IntentType
+        from services.ai.prompts import INTENT_CLASSIFICATION_PROMPT
+        if not self._llm:
+            return IntentResult(intent=IntentType.GENERAL_QUERY, confidence=0.5)
+        try:
+            response = await self._llm.chat(
+                messages=[{"role": "user", "content": INTENT_CLASSIFICATION_PROMPT.format(message=message)}],
+                task="intent_classification",
+                max_tokens=100,
+                temperature=0.1,
+            )
+            import json as _json
+            data = _json.loads(response)
+            return IntentResult(
+                intent=IntentType(data.get("intent", "general_query")),
+                confidence=float(data.get("confidence", 0.5)),
+            )
+        except Exception:
+            return IntentResult(intent=IntentType.GENERAL_QUERY, confidence=0.5)
+
+_graph_intent_classifier = _GraphIntentClassifier(_llm_router)
+
+if _llm_router:
+    _query_engine = GraphRAGQueryEngine(
+        graph_service=graph_service,
+        llm_router=_llm_router,
+        intent_classifier=_graph_intent_classifier,
+        entity_extractor=_entity_extractor,
+        part_parser=_part_parser,
+        inventory_service=inventory_service,
+        pricing_service=pricing_service,
+    )
+
 business_logic = BusinessLogic(
     ai_service=ai_service,
     db_manager=db_manager,
@@ -265,6 +359,7 @@ business_logic = BusinessLogic(
     quote_service=quote_service,
     customer_service=customer_service,
     rma_service=rma_service,
+    query_engine=_query_engine,
 )
 chatbot = ChatbotEngine(
     logger=logger,
@@ -298,6 +393,22 @@ async def lifespan(app: FastAPI):
             logger.info("Platform schema ready")
         except Exception as e:
             logger.error(f"Platform schema creation failed: {e}")
+
+    # Connect to Neo4j knowledge graph
+    try:
+        await neo4j_client.connect()
+        from services.graph.schema import create_schema
+        await create_schema(neo4j_client)
+        set_graph_services(graph_service, graph_sync)
+        logger.info("Neo4j knowledge graph connected and schema ready")
+
+        # Seed demo graph data in debug mode
+        if settings.debug:
+            from services.graph.seed_demo import seed_graph
+            seed_stats = await seed_graph(graph_service, _embedding_client)
+            logger.info("Graph seed: %s", seed_stats)
+    except Exception as e:
+        logger.warning("Neo4j connection failed (non-fatal, graph features disabled): %s", e)
 
     # Inject services into the platform API router
     set_services({
@@ -333,8 +444,11 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info(f"Shutting down {settings.app_name}")
+    await neo4j_client.close()
     await db_manager.close()
     await comm_manager.close()
+    if _embedding_client:
+        await _embedding_client.close()
 
 
 app = FastAPI(
@@ -346,6 +460,7 @@ app = FastAPI(
 
 # Platform API routes
 app.include_router(platform_router)
+app.include_router(graph_router)
 
 # Rate limiter
 app.state.limiter = limiter
@@ -429,6 +544,7 @@ async def detailed_health_check():
                 "healthy": redis_healthy,
                 "error": redis_error,
             },
+            "neo4j": await neo4j_client.health_check(),
             "whatsapp": {"configured": bool(settings.whatsapp_access_token)},
             "ai": {
                 "available": ai_service.client is not None,
@@ -474,6 +590,9 @@ async def root():
             "AI-enhanced Conversational Interface (Claude)",
             "WhatsApp Business Integration",
             "Prometheus Metrics & Admin Dashboard",
+            "Neo4j Knowledge Graph (Parts, Cross-refs, BOMs)",
+            "GraphRAG 5-Stage Query Engine (Intent → Graph → Vector → Context → LLM)",
+            "ChemPoint Industrial Product Ingestion",
         ],
     }
 

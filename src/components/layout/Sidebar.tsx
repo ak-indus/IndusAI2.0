@@ -11,6 +11,7 @@ import {
   RotateCcw,
   Bot,
   Radio,
+  Network,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -31,6 +32,12 @@ const NAV_SECTIONS: NavSection[] = [
       { to: "/procurement", label: "Procurement", icon: Truck },
       { to: "/invoices", label: "Invoicing", icon: Receipt },
       { to: "/rma", label: "Returns", icon: RotateCcw },
+    ],
+  },
+  {
+    label: "Intelligence",
+    items: [
+      { to: "/knowledge-graph", label: "Knowledge Graph", icon: Network },
     ],
   },
   {
