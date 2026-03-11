@@ -323,22 +323,57 @@ Part ──EQUIVALENT_TO──> Part (confidence: 0.95)
 
 ---
 
-## The Ask
+## Capital Strategy: Bootstrap-First
 
-### Seed Round: $2-3M
+### Why this business doesn't need venture capital to start
 
-| Use of Funds | Allocation | Purpose |
-|--------------|-----------|---------|
-| Engineering | 50% | Multi-tenancy, catalog import tooling, enterprise features (SSO, audit logging) |
-| GTM | 30% | First 10-20 customers, industry events, demo environment per prospect |
-| Operations | 20% | Infrastructure, LLM costs, legal, compliance |
+IndusAI is designed to be profitable from customer #1. The unit economics make bootstrapping not just viable, but strategically superior — retaining full ownership through the highest-leverage phase of the business.
 
-### What this capital buys
+### Actual cost structure
 
-- 12 months of runway to reach $1-2M ARR
-- 20-30 paying customers across chemical distributors, MRO distributors, and chemical suppliers
-- Proof of geographic expansion (1-2 WhatsApp-first international markets)
-- Series A readiness with demonstrated product-market fit, repeatable sales motion, and net dollar retention >120%
+| Phase | Monthly Burn | Revenue Needed to Break Even |
+|-------|-------------|------------------------------|
+| **MVP (Mo 1-3)** | **$425/mo** | 1 customer at $2K/mo covers it |
+| **Early customers (Mo 4-12)** | **$2,200/mo** | 1 customer at $5K/mo covers it |
+| **Scale (Year 2)** | **$8,200/mo** | 2 customers cover it |
+
+Infrastructure breakdown:
+- Self-hosted VPS (PostgreSQL + Redis + Neo4j Community): $75/mo
+- Claude API (Haiku/Sonnet task-routed): $300/mo at 35K messages → scales to $1,500/mo at 150K messages
+- WhatsApp Business API: $50-300/mo (scales with volume)
+- Firecrawl: $0 (BeautifulSoup fallback built in; upgrade only for JS-heavy sites)
+- Voyage AI: $0 (optional; can use open-source embeddings)
+
+### Why margins make this self-funding
+
+| Customers | MRR | API Costs | Gross Profit | Margin |
+|-----------|-----|-----------|-------------|--------|
+| 1 | $5K | $200 | $4,800 | 96% |
+| 5 | $25K | $1,000 | $24,000 | 96% |
+| 20 | $100K | $3,000 | $97,000 | 97% |
+
+Cost per GraphRAG query: $0.009. Value per query: $5-15 (rep time saved). **ROI: 400-1,250x per query.**
+
+With prompt caching (1-2 days work) + response caching (3-5 days), per-query cost drops to ~$0.003.
+
+### Bootstrap timeline
+
+```
+Month 1:   $425 burn. Land 1 pilot (free or discounted).
+Month 2:   Convert pilot to $5K/mo. Profitable.
+Month 3:   Land 2 more. $15K MRR, $1K costs. $14K/mo gross profit.
+Month 6:   10 customers. $50K MRR. Hire first engineer from cash flow.
+Month 9:   15 customers. $75K MRR. Add WhatsApp-first international pilot.
+Month 12:  20+ customers. $100K+ MRR. $97K/mo gross profit. Fully self-funding.
+```
+
+### If/when to raise (optional)
+
+Capital is a time-compression tool, not a survival requirement:
+- **$0 raised** works if founders can cover 2-3 months personal runway while landing first customer
+- **$100-200K angel** buys 12+ months with zero revenue pressure and maximum optionality
+- **$500K** buys a junior engineer + aggressive GTM (industry events, per-prospect demo environments)
+- **Series A at $1M+ ARR** from a position of strength — profitable, growing, with leverage in negotiation
 
 ---
 

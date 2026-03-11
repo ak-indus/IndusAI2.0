@@ -164,8 +164,8 @@ Timeline visual:
 
 ---
 
-## Slide 10: Business Model
-**Platform + usage + seats = predictable revenue with built-in expansion**
+## Slide 10: Business Model & Unit Economics
+**Profitable from customer #1. 96% gross margins. Self-funding by month 3.**
 
 | Component | Model |
 |-----------|-------|
@@ -174,11 +174,18 @@ Timeline visual:
 | Per-seat | $50-100/user/month |
 | Data ingestion | $500-2K one-time |
 
-**Blended ACV: $50-100K | Gross margin: 80-85%**
+**Blended ACV: $50-100K | Gross margin: 96%**
 
-Unit economics box:
-- Query cost: $0.012 → Query value: $5-15 → **ROI: 400-1,250x**
-- Estimated CAC: $5-10K → LTV (3yr): $150-300K → **LTV:CAC: 15-30x**
+The math that makes bootstrapping work:
+- Total infrastructure: $425/mo (VPS + Claude API + WhatsApp)
+- Revenue from 1 customer: $5K/mo
+- **Customer #1 = profitable**
+
+| Customers | MRR | API Costs | Gross Profit | Margin |
+|-----------|-----|-----------|-------------|--------|
+| 1 | $5K | $200 | $4,800 | 96% |
+| 5 | $25K | $1,000 | $24,000 | 96% |
+| 20 | $100K | $3,000 | $97,000 | 97% |
 
 Expansion levers: seats, product lines, channels, modules, data flywheel
 
@@ -195,20 +202,30 @@ Expansion levers: seats, product lines, channels, modules, data flywheel
 
 ---
 
-## Slide 12: The Ask
-**Raising $2-3M Seed to reach $1-2M ARR in 12 months**
+## Slide 12: Bootstrap Path to $1M ARR
+**No VC required. Profitable from day one. Raise only to compress time.**
 
-Use of funds:
-- 50% Engineering (multi-tenancy, enterprise features, catalog tooling)
-- 30% GTM (first 20-30 customers, industry events, per-prospect demos)
-- 20% Operations (infrastructure, LLM costs, legal)
+Bootstrap timeline:
+```
+Month 1:   $425/mo burn. Land first pilot.
+Month 2:   Convert to $5K/mo paid. Profitable.
+Month 3:   3 customers. $15K MRR. $14K/mo gross profit.
+Month 6:   10 customers. $50K MRR. Hire first engineer from cash flow.
+Month 9:   15 customers. $75K MRR. International pilot.
+Month 12:  20+ customers. $100K+ MRR. Fully self-funding.
+```
 
-12-month targets:
-- 20-30 paying customers
-- $1-2M ARR
+If/when to raise (optional — from a position of strength):
+- **$0**: Works if founders cover 2-3 months personal runway
+- **$100-200K angel**: 12+ months runway, zero revenue pressure, max optionality
+- **$500K**: Junior engineer + aggressive GTM (events, per-prospect demos)
+- **Series A at $1M+ ARR**: Profitable, growing, with leverage in negotiation
+
+12-month targets (bootstrap or funded):
+- 20+ paying customers across chemical + MRO distribution
+- $100K+ MRR, 96% gross margins
 - Net dollar retention >120%
-- 1-2 international markets validated
-- Series A ready
+- 1-2 WhatsApp-first international markets validated
 
 ---
 
