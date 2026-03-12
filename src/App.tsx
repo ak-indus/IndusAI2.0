@@ -16,6 +16,7 @@ const RMA = lazy(() => import("@/pages/RMA"));
 const Channels = lazy(() => import("@/pages/Channels"));
 const Chat = lazy(() => import("@/pages/Chat"));
 const KnowledgeGraph = lazy(() => import("@/pages/KnowledgeGraph"));
+const Demo = lazy(() => import("@/pages/Demo"));
 
 function PageLoader() {
   return (
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/channels" element={<Suspense fallback={<PageLoader />}><Channels /></Suspense>} />
           <Route path="/chat" element={<Suspense fallback={<PageLoader />}><Chat /></Suspense>} />
           <Route path="/knowledge-graph" element={<Suspense fallback={<PageLoader />}><KnowledgeGraph /></Suspense>} />
+          <Route path="/demo" element={<Suspense fallback={<PageLoader />}><Demo /></Suspense>} />
         </Route>
       </Routes>
       <Toaster position="top-right" richColors />

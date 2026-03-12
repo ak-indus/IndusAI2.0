@@ -12,6 +12,7 @@ import {
   Bot,
   Radio,
   Network,
+  Play,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -45,6 +46,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: "/channels", label: "Channels", icon: Radio },
       { to: "/chat", label: "AI Assistant", icon: Bot },
+      { to: "/demo", label: "Live Demo", icon: Play },
     ],
   },
 ];
