@@ -17,6 +17,10 @@ const Channels = lazy(() => import("@/pages/Channels"));
 const Chat = lazy(() => import("@/pages/Chat"));
 const KnowledgeGraph = lazy(() => import("@/pages/KnowledgeGraph"));
 const Demo = lazy(() => import("@/pages/Demo"));
+const DemoSupport = lazy(() => import("@/pages/DemoSupport"));
+const DemoSales = lazy(() => import("@/pages/DemoSales"));
+const DemoFinance = lazy(() => import("@/pages/DemoFinance"));
+const DemoOps = lazy(() => import("@/pages/DemoOps"));
 
 function PageLoader() {
   return (
@@ -45,6 +49,10 @@ export default function App() {
           <Route path="/chat" element={<Suspense fallback={<PageLoader />}><Chat /></Suspense>} />
           <Route path="/knowledge-graph" element={<Suspense fallback={<PageLoader />}><KnowledgeGraph /></Suspense>} />
           <Route path="/demo" element={<Suspense fallback={<PageLoader />}><Demo /></Suspense>} />
+          <Route path="/demo/support" element={<Suspense fallback={<PageLoader />}><DemoSupport /></Suspense>} />
+          <Route path="/demo/sales" element={<Suspense fallback={<PageLoader />}><DemoSales /></Suspense>} />
+          <Route path="/demo/finance" element={<Suspense fallback={<PageLoader />}><DemoFinance /></Suspense>} />
+          <Route path="/demo/ops" element={<Suspense fallback={<PageLoader />}><DemoOps /></Suspense>} />
         </Route>
       </Routes>
       <Toaster position="top-right" richColors />

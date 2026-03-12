@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { api, ChatResponse } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
@@ -14,6 +15,10 @@ import {
   Sparkles,
   Package,
   RotateCcw,
+  Headphones,
+  TrendingUp,
+  DollarSign,
+  Activity,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -478,7 +483,39 @@ const WELCOME: Message = {
   timestamp: new Date(),
 };
 
+const PERSONA_VIEWS = [
+  {
+    label: "Customer Support",
+    description: "Tickets, AI-assisted responses, escalations",
+    path: "/demo/support",
+    icon: Headphones,
+    color: "from-emerald-500 to-emerald-600",
+  },
+  {
+    label: "Inbound Sales",
+    description: "Quotes, pipeline, order conversion",
+    path: "/demo/sales",
+    icon: TrendingUp,
+    color: "from-blue-500 to-indigo-600",
+  },
+  {
+    label: "Finance",
+    description: "Invoicing, AR aging, margins, rebates",
+    path: "/demo/finance",
+    icon: DollarSign,
+    color: "from-amber-500 to-orange-600",
+  },
+  {
+    label: "Operations",
+    description: "System health, fulfillment, inventory alerts",
+    path: "/demo/ops",
+    icon: Activity,
+    color: "from-slate-500 to-slate-700",
+  },
+];
+
 export default function Demo() {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -608,7 +645,48 @@ export default function Demo() {
   const currentPipeline = activePipeline || lastPipeline;
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] gap-4">
+    <div className="space-y-4">
+      {/* Persona Hub */}
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h1 className="font-montserrat text-xl font-bold text-slate-900">
+              IndusAI Live Demo
+            </h1>
+            <p className="text-xs text-slate-500">
+              Explore each persona view or try the AI assistant below
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-4 gap-3">
+          {PERSONA_VIEWS.map((p) => (
+            <button
+              key={p.path}
+              onClick={() => navigate(p.path)}
+              className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-slate-300"
+            >
+              <div className={cn(
+                "absolute inset-0 opacity-0 bg-gradient-to-br transition-opacity group-hover:opacity-5",
+                p.color
+              )} />
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br text-white",
+                  p.color
+                )}>
+                  <p.icon className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">{p.label}</p>
+                  <p className="text-[11px] text-slate-500">{p.description}</p>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+    <div className="flex h-[calc(100vh-16rem)] gap-4">
       {/* LEFT: Chat */}
       <div className="flex w-[55%] flex-col rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         {/* Header */}
@@ -834,6 +912,7 @@ export default function Demo() {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }
