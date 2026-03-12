@@ -19,6 +19,7 @@ import {
   TrendingUp,
   DollarSign,
   Activity,
+  Route,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -512,6 +513,13 @@ const PERSONA_VIEWS = [
     icon: Activity,
     color: "from-slate-500 to-slate-700",
   },
+  {
+    label: "Customer Journey",
+    description: "Omnichannel view: inquiry to fulfillment",
+    path: "/demo/journey",
+    icon: Route,
+    color: "from-violet-500 to-purple-600",
+  },
 ];
 
 export default function Demo() {
@@ -658,7 +666,7 @@ export default function Demo() {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-5 gap-3">
           {PERSONA_VIEWS.map((p) => (
             <button
               key={p.path}
