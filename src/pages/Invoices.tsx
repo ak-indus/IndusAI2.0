@@ -59,20 +59,32 @@ export default function Invoices() {
     enabled: tab === "aging",
   });
 
+  const useFallbackInvoices = invoicesQuery.isError || (!invoicesQuery.isLoading && !invoicesQuery.data && tab === "invoices");
+  const useFallbackAging = agingQuery.isError || (!agingQuery.isLoading && !agingQuery.data && tab === "aging");
+  const useFallback = (tab === "invoices" && useFallbackInvoices) || (tab === "aging" && useFallbackAging);
+
   const agingBucketOrder = ["current", "1-30", "31-60", "61-90", "90+"];
 
-  const chartData = agingQuery.data
+  const agingData = useFallbackAging ? DEMO_AR_AGING : agingQuery.data;
+  const chartData = agingData
     ? agingBucketOrder
-        .filter((key) => agingQuery.data![key])
+        .filter((key) => agingData[key])
         .map((key) => ({
           bucket: AGING_LABELS[key] || key,
-          balance: agingQuery.data![key].balance,
+          balance: agingData[key].balance,
           color: AGING_COLORS[key] || "#6b7280",
         }))
     : [];
 
   return (
     <div className="space-y-6">
+      {/* Demo Mode Banner */}
+      {useFallback && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-700">
+          <span className="font-semibold">Demo Mode</span> — Showing sample data. Connect backend for live data.
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">
@@ -146,26 +158,8 @@ export default function Invoices() {
             </div>
           )}
 
-          {/* Error */}
-          {invoicesQuery.isError && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-              <p className="text-sm text-red-700">
-                Failed to load invoices:{" "}
-                {invoicesQuery.error instanceof Error
-                  ? invoicesQuery.error.message
-                  : "Unknown error"}
-              </p>
-              <button
-                onClick={() => invoicesQuery.refetch()}
-                className="mt-2 text-sm font-medium text-red-700 underline hover:text-red-800"
-              >
-                Retry
-              </button>
-            </div>
-          )}
-
           {/* Table */}
-          {invoicesQuery.data && (
+          {(invoicesQuery.data || useFallbackInvoices) && (
             <>
               <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -195,7 +189,7 @@ export default function Invoices() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
-                    {invoicesQuery.data.items.map((inv: Invoice) => (
+                    {(useFallbackInvoices ? DEMO_INVOICES : invoicesQuery.data!.items).map((inv: Invoice) => (
                       <tr
                         key={inv.id}
                         className="hover:bg-gray-50 transition-colors"
@@ -230,7 +224,7 @@ export default function Invoices() {
                         </td>
                       </tr>
                     ))}
-                    {invoicesQuery.data.items.length === 0 && (
+                    {(useFallbackInvoices ? DEMO_INVOICES : invoicesQuery.data!.items).length === 0 && (
                       <tr>
                         <td
                           colSpan={7}
@@ -245,7 +239,7 @@ export default function Invoices() {
               </div>
 
               {/* Pagination */}
-              {invoicesQuery.data.total_pages > 1 && (
+              {!useFallbackInvoices && invoicesQuery.data && invoicesQuery.data.total_pages > 1 && (
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-gray-500">
                     Page {invoicesQuery.data.page} of{" "}
@@ -292,25 +286,7 @@ export default function Invoices() {
             </div>
           )}
 
-          {/* Error */}
-          {agingQuery.isError && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-              <p className="text-sm text-red-700">
-                Failed to load AR aging:{" "}
-                {agingQuery.error instanceof Error
-                  ? agingQuery.error.message
-                  : "Unknown error"}
-              </p>
-              <button
-                onClick={() => agingQuery.refetch()}
-                className="mt-2 text-sm font-medium text-red-700 underline hover:text-red-800"
-              >
-                Retry
-              </button>
-            </div>
-          )}
-
-          {agingQuery.data && (
+          {agingData && (
             <>
               {/* Bar Chart */}
               <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
@@ -361,7 +337,7 @@ export default function Invoices() {
               {/* Summary Cards */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
                 {agingBucketOrder.map((key) => {
-                  const bucket = agingQuery.data![key];
+                  const bucket = agingData![key];
                   if (!bucket) return null;
                   return (
                     <div

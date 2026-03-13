@@ -85,11 +85,23 @@ export default function Channels() {
     enabled: activeTab === "escalations" || activeTab === "overview",
   });
 
-  const stats = statsQuery.data;
+  const useFallbackStats = statsQuery.isError || (!statsQuery.isLoading && !statsQuery.data);
+  const useFallbackMessages = messagesQuery.isError || (!messagesQuery.isLoading && !messagesQuery.data);
+  const useFallbackEscalations = escalationsQuery.isError || (!escalationsQuery.isLoading && !escalationsQuery.data);
+  const useFallback = useFallbackStats || useFallbackMessages || useFallbackEscalations;
+
+  const stats = useFallbackStats ? DEMO_CHANNEL_STATS : statsQuery.data;
   const allChannels = ["whatsapp", "email", "sms", "fax", "web"];
 
   return (
     <div className="space-y-6">
+      {/* Demo Mode Banner */}
+      {useFallback && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-700">
+          <span className="font-semibold">Demo Mode</span> — Showing sample data. Connect backend for live data.
+        </div>
+      )}
+
       {/* Page header */}
       <div>
         <h1 className="font-montserrat text-2xl font-bold text-slate-900">
@@ -210,7 +222,7 @@ export default function Channels() {
           </div>
 
           {/* Recent conversations preview */}
-          {messagesQuery.data && messagesQuery.data.items.length > 0 && (
+          {((messagesQuery.data && messagesQuery.data.items.length > 0) || useFallbackMessages) && (
             <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
               <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-700">
@@ -224,7 +236,7 @@ export default function Channels() {
                 </button>
               </div>
               <div className="divide-y divide-slate-100">
-                {messagesQuery.data.items.slice(0, 5).map((msg: ChannelMessage) => (
+                {(useFallbackMessages ? DEMO_CHANNEL_MESSAGES : messagesQuery.data!.items).slice(0, 5).map((msg: ChannelMessage) => (
                   <div key={msg.id} className="flex items-start gap-3 px-5 py-3">
                     <div className={cn(
                       "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
@@ -283,18 +295,8 @@ export default function Channels() {
             </div>
           )}
 
-          {/* Error */}
-          {messagesQuery.isError && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-              <p className="text-sm font-medium text-red-800">Failed to load messages</p>
-              <p className="mt-1 text-sm text-red-600">
-                {messagesQuery.error instanceof Error ? messagesQuery.error.message : "An unexpected error occurred."}
-              </p>
-            </div>
-          )}
-
           {/* Table */}
-          {messagesQuery.data && (
+          {(messagesQuery.data || useFallbackMessages) && (
             <>
               <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -309,14 +311,14 @@ export default function Channels() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {messagesQuery.data.items.length === 0 ? (
+                    {(useFallbackMessages ? DEMO_CHANNEL_MESSAGES : messagesQuery.data!.items).length === 0 ? (
                       <tr>
                         <td colSpan={6} className="px-5 py-16 text-center text-sm text-gray-400">
                           No messages found.
                         </td>
                       </tr>
                     ) : (
-                      messagesQuery.data.items.map((msg: ChannelMessage) => (
+                      (useFallbackMessages ? DEMO_CHANNEL_MESSAGES : messagesQuery.data!.items).map((msg: ChannelMessage) => (
                         <tr key={msg.id} className="transition-colors hover:bg-gray-50">
                           <td className="whitespace-nowrap px-5 py-3">
                             <div className="flex items-center gap-2">
@@ -359,7 +361,7 @@ export default function Channels() {
               </div>
 
               {/* Pagination */}
-              {messagesQuery.data.total_pages > 1 && (
+              {!useFallbackMessages && messagesQuery.data && messagesQuery.data.total_pages > 1 && (
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-gray-500">
                     Page {messagesQuery.data.page} of {messagesQuery.data.total_pages} ({messagesQuery.data.total} total)
@@ -416,15 +418,8 @@ export default function Channels() {
             </div>
           )}
 
-          {/* Error */}
-          {escalationsQuery.isError && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-              <p className="text-sm font-medium text-red-800">Failed to load escalations</p>
-            </div>
-          )}
-
           {/* Table */}
-          {escalationsQuery.data && (
+          {(escalationsQuery.data || useFallbackEscalations) && (
             <>
               <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -439,14 +434,14 @@ export default function Channels() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {escalationsQuery.data.items.length === 0 ? (
+                    {(useFallbackEscalations ? DEMO_ESCALATION_TICKETS : escalationsQuery.data!.items).length === 0 ? (
                       <tr>
                         <td colSpan={6} className="px-5 py-16 text-center text-sm text-gray-400">
                           No escalation tickets found.
                         </td>
                       </tr>
                     ) : (
-                      escalationsQuery.data.items.map((ticket: EscalationTicket) => (
+                      (useFallbackEscalations ? DEMO_ESCALATION_TICKETS : escalationsQuery.data!.items).map((ticket: EscalationTicket) => (
                         <tr key={ticket.id} className="transition-colors hover:bg-gray-50">
                           <td className="whitespace-nowrap px-5 py-3">
                             <span className={cn(
@@ -486,7 +481,7 @@ export default function Channels() {
               </div>
 
               {/* Pagination */}
-              {escalationsQuery.data.total_pages > 1 && (
+              {!useFallbackEscalations && escalationsQuery.data && escalationsQuery.data.total_pages > 1 && (
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-gray-500">
                     Page {escalationsQuery.data.page} of {escalationsQuery.data.total_pages} ({escalationsQuery.data.total} total)

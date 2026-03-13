@@ -12,8 +12,18 @@ export default function RMA() {
     queryFn: () => api.getRMAs(page),
   });
 
+  const useFallback = rmaQuery.isError || (!rmaQuery.isLoading && !rmaQuery.data);
+  const rmaItems = useFallback ? DEMO_RMAS : (rmaQuery.data?.items ?? []);
+
   return (
     <div className="space-y-6">
+      {/* Demo Mode Banner */}
+      {useFallback && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-700">
+          <span className="font-semibold">Demo Mode</span> — Showing sample data. Connect backend for live data.
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">RMA / Returns</h1>
@@ -30,26 +40,8 @@ export default function RMA() {
         </div>
       )}
 
-      {/* Error */}
-      {rmaQuery.isError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-          <p className="text-sm text-red-700">
-            Failed to load RMAs:{" "}
-            {rmaQuery.error instanceof Error
-              ? rmaQuery.error.message
-              : "Unknown error"}
-          </p>
-          <button
-            onClick={() => rmaQuery.refetch()}
-            className="mt-2 text-sm font-medium text-red-700 underline hover:text-red-800"
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
       {/* Table */}
-      {rmaQuery.data && (
+      {!rmaQuery.isLoading && (rmaQuery.data || useFallback) && (
         <>
           <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
             <table className="min-w-full divide-y divide-gray-200">
@@ -73,7 +65,7 @@ export default function RMA() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {rmaQuery.data.items.map((rma: RMAType) => (
+                {rmaItems.map((rma: RMAType) => (
                   <tr
                     key={rma.id}
                     className="hover:bg-gray-50 transition-colors"
@@ -102,7 +94,7 @@ export default function RMA() {
                     </td>
                   </tr>
                 ))}
-                {rmaQuery.data.items.length === 0 && (
+                {rmaItems.length === 0 && (
                   <tr>
                     <td
                       colSpan={5}
@@ -117,7 +109,7 @@ export default function RMA() {
           </div>
 
           {/* Pagination */}
-          {rmaQuery.data.total_pages > 1 && (
+          {!useFallback && rmaQuery.data && rmaQuery.data.total_pages > 1 && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-500">
                 Page {rmaQuery.data.page} of {rmaQuery.data.total_pages} (
