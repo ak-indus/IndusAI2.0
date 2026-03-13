@@ -186,18 +186,17 @@ function SalesTrendChart() {
 
 export default function Dashboard() {
   const {
-    data: metrics,
+    data: rawMetrics,
     isLoading,
     isError,
-    error,
   } = useQuery<DashboardMetrics>({
     queryKey: ["dashboard"],
     queryFn: api.getDashboard,
     refetchInterval: 60_000,
   });
 
-  const useFallback = isError || (!isLoading && !metrics);
-  const displayMetrics = useFallback ? DEMO_DASHBOARD_METRICS : metrics;
+  const useFallback = isError || (!isLoading && !rawMetrics);
+  const displayMetrics = useFallback ? DEMO_DASHBOARD_METRICS : rawMetrics;
 
   /* ---------- Loading State ---------- */
 
@@ -213,7 +212,7 @@ export default function Dashboard() {
 
   /* ---------- Derived data ---------- */
 
-  const metrics = displayMetrics;
+  const metrics = displayMetrics!;
 
   const kpiCards: KpiCard[] = [
     {
