@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, Order } from "@/lib/api";
+import { DEMO_ORDERS } from "@/lib/demoData";
 import { useState } from "react";
 import { formatCurrency, statusColor, cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -24,11 +25,19 @@ export default function Orders() {
     queryFn: () => api.getOrders(page, statusFilter),
   });
 
-  const orders = data?.items ?? [];
-  const totalPages = data?.total_pages ?? 1;
+  const useFallback = isError || (!isLoading && !data);
+  const orders = useFallback ? DEMO_ORDERS : (data?.items ?? []);
+  const totalPages = useFallback ? 1 : (data?.total_pages ?? 1);
 
   return (
     <div className="space-y-6">
+      {/* Demo Mode Banner */}
+      {useFallback && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-700">
+          <span className="font-semibold">Demo Mode</span> — Showing sample data. Connect backend for live data.
+        </div>
+      )}
+
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
@@ -72,20 +81,8 @@ export default function Orders() {
         </div>
       )}
 
-      {/* Error state */}
-      {isError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-          <p className="text-sm font-medium text-red-800">
-            Failed to load orders
-          </p>
-          <p className="mt-1 text-sm text-red-600">
-            {error instanceof Error ? error.message : "An unexpected error occurred."}
-          </p>
-        </div>
-      )}
-
       {/* Table */}
-      {!isLoading && !isError && (
+      {!isLoading && (
         <>
           <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
             <table className="min-w-full divide-y divide-gray-200">

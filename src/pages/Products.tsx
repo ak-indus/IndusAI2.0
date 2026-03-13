@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, Product } from "@/lib/api";
+import { DEMO_PRODUCTS } from "@/lib/demoData";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -24,6 +25,8 @@ export default function Products() {
     setPage(1);
   }
 
+  const useFallback = isError || (!isLoading && !data);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -35,25 +38,19 @@ export default function Products() {
     );
   }
 
-  if (isError) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md text-center">
-          <h3 className="text-red-800 font-semibold text-lg mb-2">Failed to load products</h3>
-          <p className="text-red-600 text-sm">
-            {error instanceof Error ? error.message : "An unexpected error occurred."}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const products = data?.items ?? [];
-  const totalPages = data?.total_pages ?? 1;
-  const total = data?.total ?? 0;
+  const products = useFallback ? DEMO_PRODUCTS : (data?.items ?? []);
+  const totalPages = useFallback ? 1 : (data?.total_pages ?? 1);
+  const total = useFallback ? DEMO_PRODUCTS.length : (data?.total ?? 0);
 
   return (
     <div className="space-y-6">
+      {/* Demo Mode Banner */}
+      {useFallback && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-700">
+          <span className="font-semibold">Demo Mode</span> — Showing sample data. Connect backend for live data.
+        </div>
+      )}
+
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-montserrat font-bold text-neutral-900">Product Catalog</h1>

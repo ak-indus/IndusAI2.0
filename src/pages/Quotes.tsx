@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, Quote } from "@/lib/api";
+import { DEMO_QUOTES } from "@/lib/demoData";
 import { formatCurrency, statusColor, cn } from "@/lib/utils";
 
 export default function Quotes() {
@@ -8,10 +9,18 @@ export default function Quotes() {
     queryFn: () => api.getQuotes(),
   });
 
-  const quotes = data?.items ?? [];
+  const useFallback = isError || (!isLoading && !data);
+  const quotes = useFallback ? DEMO_QUOTES : (data?.items ?? []);
 
   return (
     <div className="space-y-6">
+      {/* Demo Mode Banner */}
+      {useFallback && !isLoading && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-700">
+          <span className="font-semibold">Demo Mode</span> — Showing sample data. Connect backend for live data.
+        </div>
+      )}
+
       {/* Page header */}
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">Quotes</h1>
@@ -28,22 +37,8 @@ export default function Quotes() {
         </div>
       )}
 
-      {/* Error state */}
-      {isError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-          <p className="text-sm font-medium text-red-800">
-            Failed to load quotes
-          </p>
-          <p className="mt-1 text-sm text-red-600">
-            {error instanceof Error
-              ? error.message
-              : "An unexpected error occurred."}
-          </p>
-        </div>
-      )}
-
       {/* Table */}
-      {!isLoading && !isError && (
+      {!isLoading && (
         <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">

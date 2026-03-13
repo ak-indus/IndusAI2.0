@@ -91,8 +91,8 @@ const PERSONA_CONFIG: Record<PersonaType, { label: string; icon: typeof Headphon
 // ---------------------------------------------------------------------------
 
 const CUSTOMER: CustomerProfile = {
-  name: "Rajesh Patel",
-  company: "Patel Industrial Supplies",
+  name: "Mike Rodriguez",
+  company: "Rodriguez Machining Co.",
   segment: "Mid-Market",
   lifetime: "3 years",
   totalOrders: 47,
@@ -119,7 +119,7 @@ const JOURNEY: Touchpoint[] = [
     details: {
       inbound: "\"Hi, we have a conveyor bearing that's failing. Here's a photo. Need urgent replacement — line is down. Currently using SKF 6205-2RS.\"",
       aiAction: "AI Vision identifies SKF 6205-2RS from photo. Cross-references Neo4j graph: 3 equivalents found (NSK, FAG, NTN). Checks inventory — SKF in stock (24 units), NSK in stock (12 units).",
-      outbound: "\"Hi Rajesh! I identified the SKF 6205-2RS from your photo. We have 24 in stock for same-day dispatch. I also found the NSK 6205DDU as a drop-in alternative at 8% lower cost. Want me to prepare a quote for either?\"",
+      outbound: "\"Hi Mike! I identified the SKF 6205-2RS from your photo. We have 24 in stock for same-day dispatch. I also found the NSK 6205DDU as a drop-in alternative at 8% lower cost. Want me to prepare a quote for either?\"",
       outcome: "Response time: 45 seconds (AI-assisted). Customer impressed by speed.",
     },
   },
@@ -153,7 +153,7 @@ const JOURNEY: Touchpoint[] = [
     details: {
       inbound: "\"Thanks for the quick quote. Can you send me the TDS for the SKF 6205 and the NSK equivalent? Our engineering team needs to approve.\"",
       aiAction: "AI pulls TDS documents from knowledge graph, generates side-by-side comparison table (load ratings, speed limits, dimensions, seal type). Auto-attaches PDFs to email.",
-      outbound: "Email with subject \"TDS: SKF 6205-2RS vs NSK 6205DDU — Patel Industrial\" containing comparison table and 2 PDF attachments. Personalized note highlighting key specs for conveyor application.",
+      outbound: "Email with subject \"TDS: SKF 6205-2RS vs NSK 6205DDU — Rodriguez Machining\" containing comparison table and 2 PDF attachments. Personalized note highlighting key specs for conveyor application.",
       outcome: "Engineering approval received same day. Cross-channel context preserved from WhatsApp.",
     },
   },
@@ -253,9 +253,9 @@ const JOURNEY: Touchpoint[] = [
     status: "upcoming",
     aiAssisted: true,
     details: {
-      inbound: "AI analyzes purchase history: Rajesh orders bearings quarterly. Graph analysis shows conveyor systems also need lubrication and alignment tools.",
+      inbound: "AI analyzes purchase history: Mike orders bearings quarterly. Graph analysis shows conveyor systems also need lubrication and alignment tools.",
       aiAction: "AI generates personalized recommendation: Mobil SHC 100 synthetic grease (compatible with 6205-2RS), SKF TKBA 40 alignment tool. Schedules outreach for next week.",
-      outbound: "\"Hi Rajesh — based on your conveyor bearing setup, I'd recommend the Mobil SHC 100 grease for extended bearing life (2x vs. standard). We also carry the SKF TKBA 40 alignment tool. Want me to add these to your next order?\"",
+      outbound: "\"Hi Mike — based on your conveyor bearing setup, I'd recommend the Mobil SHC 100 grease for extended bearing life (2x vs. standard). We also carry the SKF TKBA 40 alignment tool. Want me to add these to your next order?\"",
       outcome: "Predicted 23% increase in order value through AI-driven cross-sell.",
     },
   },
@@ -333,7 +333,7 @@ export default function DemoJourney() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white font-bold text-lg">
-              RP
+              MR
             </div>
             <div>
               <h2 className="text-sm font-bold text-slate-900">{CUSTOMER.name}</h2>

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, PurchaseOrder, Supplier } from "@/lib/api";
+import { DEMO_PURCHASE_ORDERS, DEMO_SUPPLIERS } from "@/lib/demoData";
 import { useState } from "react";
 import { formatCurrency, statusColor, cn } from "@/lib/utils";
 
@@ -29,18 +30,26 @@ export default function Procurement() {
     },
   });
 
-  const purchaseOrders = posQuery.data?.items ?? [];
-  const suppliers = suppliersQuery.data?.items ?? [];
+  const useFallbackPOs = posQuery.isError || (!posQuery.isLoading && !posQuery.data);
+  const useFallbackSuppliers = suppliersQuery.isError || (!suppliersQuery.isLoading && !suppliersQuery.data);
+
+  const purchaseOrders = useFallbackPOs ? DEMO_PURCHASE_ORDERS : (posQuery.data?.items ?? []);
+  const suppliers = useFallbackSuppliers ? DEMO_SUPPLIERS : (suppliersQuery.data?.items ?? []);
 
   const isLoading =
     activeTab === "purchase-orders" ? posQuery.isLoading : suppliersQuery.isLoading;
-  const isError =
-    activeTab === "purchase-orders" ? posQuery.isError : suppliersQuery.isError;
-  const error =
-    activeTab === "purchase-orders" ? posQuery.error : suppliersQuery.error;
+  const useFallback =
+    activeTab === "purchase-orders" ? useFallbackPOs : useFallbackSuppliers;
 
   return (
     <div className="space-y-6">
+      {/* Demo Mode Banner */}
+      {useFallback && !isLoading && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-700">
+          <span className="font-semibold">Demo Mode</span> — Showing sample data. Connect backend for live data.
+        </div>
+      )}
+
       {/* Page header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -121,22 +130,8 @@ export default function Procurement() {
         </div>
       )}
 
-      {/* Error */}
-      {isError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-          <p className="text-sm font-medium text-red-800">
-            Failed to load data
-          </p>
-          <p className="mt-1 text-sm text-red-600">
-            {error instanceof Error
-              ? error.message
-              : "An unexpected error occurred."}
-          </p>
-        </div>
-      )}
-
       {/* Purchase Orders tab */}
-      {!isLoading && !isError && activeTab === "purchase-orders" && (
+      {!isLoading && activeTab === "purchase-orders" && (
         <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -213,7 +208,7 @@ export default function Procurement() {
       )}
 
       {/* Suppliers tab */}
-      {!isLoading && !isError && activeTab === "suppliers" && (
+      {!isLoading && activeTab === "suppliers" && (
         <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">

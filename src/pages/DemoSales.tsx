@@ -129,6 +129,14 @@ const DETAIL_LINE_ITEMS: LineItem[] = [
   { sku: "SEAL-CR-12345", product: "CR 12345 Oil Seal, Nitrile", qty: 12, unitCost: 6.80, unitPrice: 11.25, available: "in_stock" },
 ];
 
+const DETAIL_LINE_ITEMS_PUMP: LineItem[] = [
+  { sku: "PMP-CSG-SS316", product: "Pump Casing — SS316, 4\" Discharge", qty: 3, unitCost: 845.00, unitPrice: 1290.00, available: "in_stock" },
+  { sku: "PMP-IMP-SS316", product: "Closed Impeller — SS316, 6.5\" Dia", qty: 3, unitCost: 320.00, unitPrice: 485.00, available: "in_stock" },
+  { sku: "SEAL-MECH-2100", product: "John Crane Type 2100 Mechanical Seal", qty: 3, unitCost: 410.00, unitPrice: 625.00, available: "low_stock" },
+  { sku: "CPL-JAW-L100", product: "Lovejoy L-100 Jaw Coupling", qty: 3, unitCost: 58.00, unitPrice: 92.00, available: "in_stock" },
+  { sku: "MTR-WEG-5HP", product: "WEG W22 Motor — 5HP, 3-Phase, TEFC", qty: 3, unitCost: 680.00, unitPrice: 1050.00, available: "in_stock" },
+];
+
 const REVENUE_BY_CUSTOMER = [
   { name: "Apex Industrial", revenue: 89000 },
   { name: "Mountain States Supply", revenue: 42000 },
@@ -221,6 +229,16 @@ export default function DemoSales() {
     { revenue: 0, cost: 0 },
   );
   const detailMarginPct = ((detailTotals.revenue - detailTotals.cost) / detailTotals.revenue) * 100;
+
+  const pumpTotals = DETAIL_LINE_ITEMS_PUMP.reduce(
+    (acc, li) => {
+      const ext = li.qty * li.unitPrice;
+      const cost = li.qty * li.unitCost;
+      return { revenue: acc.revenue + ext, cost: acc.cost + cost };
+    },
+    { revenue: 0, cost: 0 },
+  );
+  const pumpMarginPct = ((pumpTotals.revenue - pumpTotals.cost) / pumpTotals.revenue) * 100;
 
   /* ---------- Render ---------- */
 
@@ -362,8 +380,13 @@ export default function DemoSales() {
                 )}
               </button>
 
-              {/* Expanded detail (only for QT-2026-0091 with full data) */}
-              {expandedQuote === q.id && q.id === "QT-2026-0091" && (
+              {/* Expanded detail (for QT-2026-0091 and QT-2026-0092 with full data) */}
+              {expandedQuote === q.id && (q.id === "QT-2026-0091" || q.id === "QT-2026-0092") && (() => {
+                const lineItems = q.id === "QT-2026-0092" ? DETAIL_LINE_ITEMS_PUMP : DETAIL_LINE_ITEMS;
+                const totals = q.id === "QT-2026-0092" ? pumpTotals : detailTotals;
+                const marginPct = q.id === "QT-2026-0092" ? pumpMarginPct : detailMarginPct;
+                const pricingTier = q.id === "QT-2026-0092" ? "B2B Enterprise (Tier 1)" : "B2B Preferred (Tier 2)";
+                return (
                 <div className="border-t border-indigo-100 bg-indigo-50/30 px-6 py-5">
                   <div className="mb-4 flex items-center justify-between">
                     <div>
@@ -371,7 +394,7 @@ export default function DemoSales() {
                         {q.id} &mdash; {q.customer}
                       </h3>
                       <p className="mt-0.5 text-xs text-slate-500">
-                        Pricing Tier: <span className="font-medium text-indigo-600">B2B Preferred (Tier 2)</span>
+                        Pricing Tier: <span className="font-medium text-indigo-600">{pricingTier}</span>
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -406,7 +429,7 @@ export default function DemoSales() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 bg-white">
-                        {DETAIL_LINE_ITEMS.map((li) => {
+                        {lineItems.map((li) => {
                           const ext = li.qty * li.unitPrice;
                           const margin = ((li.unitPrice - li.unitCost) / li.unitPrice) * 100;
                           return (
@@ -462,11 +485,11 @@ export default function DemoSales() {
                             Quote Total
                           </td>
                           <td className="px-4 py-2.5 text-right text-base font-bold text-indigo-700">
-                            {formatCurrency(detailTotals.revenue)}
+                            {formatCurrency(totals.revenue)}
                           </td>
                           <td className="px-4 py-2.5 text-center">
                             <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
-                              {detailMarginPct.toFixed(1)}% avg
+                              {marginPct.toFixed(1)}% avg
                             </span>
                           </td>
                           <td />
@@ -475,10 +498,11 @@ export default function DemoSales() {
                     </table>
                   </div>
                 </div>
-              )}
+                );
+              })()}
 
               {/* Collapsed summary for other quotes */}
-              {expandedQuote === q.id && q.id !== "QT-2026-0091" && (
+              {expandedQuote === q.id && q.id !== "QT-2026-0091" && q.id !== "QT-2026-0092" && (
                 <div className="border-t border-slate-100 bg-slate-50/50 px-6 py-4">
                   <p className="text-sm text-slate-600">
                     <span className="font-medium">{q.customer}</span> &mdash; {q.description}

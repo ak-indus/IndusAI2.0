@@ -20,6 +20,8 @@ import {
   DollarSign,
   Activity,
   Route,
+  Shield,
+  AlertTriangle,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -79,6 +81,18 @@ const DEMO_SCENARIOS: DemoScenario[] = [
     icon: Brain,
     message:
       "We're speccing a right-angle gearbox assembly. Can you pull the full BOM for model ASM-GEARBOX-001 and confirm all parts are in stock?",
+  },
+  {
+    label: "Regulatory compliance",
+    icon: Shield,
+    message:
+      "We need a solvent compatible with polypropylene that meets FDA indirect food contact requirements. What do you recommend?",
+  },
+  {
+    label: "Inventory alert",
+    icon: AlertTriangle,
+    message:
+      "Which critical parts are below reorder point right now? Flag any that have open customer orders pending.",
   },
 ];
 
@@ -250,6 +264,88 @@ const SIMULATED_RESPONSES: Record<
       "Download assembly TDS",
     ],
   },
+  regulatory_compliance: {
+    stages: [
+      {
+        name: "Intent Classification",
+        status: "done",
+        detail: "REGULATORY_COMPLIANCE (confidence: 0.95)",
+        durationMs: 40,
+      },
+      {
+        name: "Graph Traversal",
+        status: "done",
+        detail: "(Polypropylene) -> [COMPATIBLE_WITH] -> (Solvent) -> [HAS_CERTIFICATION] -> (FDA 21 CFR 177.1520)",
+        durationMs: 95,
+      },
+      {
+        name: "Vector Search",
+        status: "done",
+        detail: "Voyage AI embedding — 5 TDS documents matched, regulatory corpus scanned",
+        durationMs: 110,
+      },
+      {
+        name: "Context Assembly",
+        status: "done",
+        detail: "3 compliant solvents found. Pricing + certifications loaded.",
+        durationMs: 35,
+      },
+      {
+        name: "Response Generation",
+        status: "done",
+        detail: "Claude Sonnet — 485 tokens generated",
+        durationMs: 950,
+      },
+    ],
+    response: `Based on your requirements (polypropylene compatibility + FDA indirect food contact), I found **3 recommended solvents**:\n\n**1. Chemours Vertrel MCA** — HFC-based solvent\n   - PP compatibility: Excellent (no swelling/crazing)\n   - FDA status: **Compliant** — 21 CFR 177.1520\n   - Kb value: 10 | Boiling point: 40°C\n   - **In stock** — 12 cases @ Warehouse B\n   - Price: $285.00/case (4x1 gal)\n   - TDS: Ref# TDS-CHM-0042\n\n**2. 3M Novec 7200** — Engineered fluid\n   - PP compatibility: Excellent\n   - FDA status: **Compliant** — 21 CFR 175.105, 176.170\n   - Kb value: 12 | Boiling point: 76°C\n   - **In stock** — 8 cases\n   - Price: $342.00/case\n   - TDS: Ref# TDS-3M-0118\n\n**3. DuPont Opteon SF-80** — Next-gen HFO\n   - PP compatibility: Good (verified to 60°C)\n   - FDA status: **Compliant** — 21 CFR 177.1520\n   - GWP < 1 (most environmentally friendly option)\n   - **Low stock** — 3 cases remaining\n   - Price: $310.00/case\n   - TDS: Ref# TDS-DUP-0067\n\nAll three are non-flammable and have zero ODP. The **Vertrel MCA** is our best seller for PP food-contact applications. Want me to prepare a quote or pull the full TDS documents?`,
+    actions: [
+      "Quote Vertrel MCA",
+      "Download all 3 TDS documents",
+      "Compare regulatory certifications",
+      "Check bulk pricing",
+    ],
+  },
+  inventory_alert: {
+    stages: [
+      {
+        name: "Intent Classification",
+        status: "done",
+        detail: "INVENTORY_ALERT (confidence: 0.97)",
+        durationMs: 32,
+      },
+      {
+        name: "Graph Traversal",
+        status: "done",
+        detail: "(Part) -> [HAS_INVENTORY] -> (Stock < ReorderPoint) -> [LINKED_TO] -> (OpenOrder)",
+        durationMs: 75,
+      },
+      {
+        name: "Vector Search",
+        status: "done",
+        detail: "Skipped — inventory query resolved from relational + graph data",
+        durationMs: 0,
+      },
+      {
+        name: "Context Assembly",
+        status: "done",
+        detail: "5 parts below reorder point. 3 have pending customer orders.",
+        durationMs: 28,
+      },
+      {
+        name: "Response Generation",
+        status: "done",
+        detail: "Claude Sonnet — 390 tokens generated",
+        durationMs: 780,
+      },
+    ],
+    response: `**Inventory Alert: 5 parts below reorder point**\n\n| SKU | Part | On Hand | Reorder Pt | Pending Orders | Status |\n|-----|------|---------|------------|---------------|--------|\n| BRG-SKF-6206-2RS | SKF 6206-2RS Bearing | 4 | 20 | ORD-2026-0194 (qty 12) | **CRITICAL** |\n| SGO-220-1L | Mobil SHC 220 Gear Oil | 2 | 10 | ORD-2026-0191 (qty 5) | **CRITICAL** |\n| BLT-GATES-B68 | Gates B68 V-Belt | 7 | 15 | — | Low |\n| SEAL-NOK-TC35 | NOK TC 35-52-7 Shaft Seal | 3 | 12 | ORD-2026-0198 (qty 8) | **CRITICAL** |\n| FST-M10-HEX | M10x30 Hex Bolt Gr 8.8 | 45 | 100 | — | Low |\n\n**3 items have open customer orders that exceed current stock:**\n- SKF 6206-2RS: Need 12, have 4 → **shortfall of 8 units**\n- Mobil SHC 220: Need 5, have 2 → **shortfall of 3 units**\n- NOK Shaft Seal: Need 8, have 3 → **shortfall of 5 units**\n\nI recommend generating emergency POs for the 3 critical items immediately. Estimated lead times: SKF (2 days), Mobil (3 days), NOK (5 days). Want me to auto-generate the purchase orders?`,
+    actions: [
+      "Generate emergency POs",
+      "Notify affected customers",
+      "View full inventory report",
+      "Set up auto-reorder rules",
+    ],
+  },
 };
 
 function getSimulatedResponse(message: string) {
@@ -260,6 +356,10 @@ function getSimulatedResponse(message: string) {
     return SIMULATED_RESPONSES.cross_reference;
   if (lower.includes("bom") || lower.includes("assembly") || lower.includes("gearbox"))
     return SIMULATED_RESPONSES.technical_support;
+  if (lower.includes("fda") || lower.includes("regulatory") || lower.includes("compliance") || lower.includes("food contact"))
+    return SIMULATED_RESPONSES.regulatory_compliance;
+  if (lower.includes("reorder") || lower.includes("below") || lower.includes("inventory alert") || lower.includes("low stock"))
+    return SIMULATED_RESPONSES.inventory_alert;
   return SIMULATED_RESPONSES.product_inquiry;
 }
 
@@ -480,7 +580,7 @@ function renderInline(text: string): React.ReactNode {
 const WELCOME: Message = {
   role: "assistant",
   content:
-    "Welcome to IndusAI. I'm your AI-powered distribution assistant.\n\nAsk me about products, cross-references, orders, inventory, or technical specs. I use a knowledge graph with 50+ MRO parts, cross-manufacturer equivalences, and full BOM data.\n\nTry one of the scenarios below, or type your own question.",
+    "Welcome to IndusAI. I'm your AI-powered distribution assistant.\n\nAsk me about products, cross-references, orders, inventory, regulatory compliance, or technical specs. I use a knowledge graph with 250K+ indexed documents, cross-manufacturer equivalences, and full BOM data.\n\nTry one of the scenarios below, or type your own question.",
   timestamp: new Date(),
 };
 
@@ -902,20 +1002,20 @@ export default function Demo() {
           </div>
           <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-              Graph nodes
+              Documents indexed
             </p>
-            <p className="mt-1 text-lg font-bold text-gray-900">50+</p>
+            <p className="mt-1 text-lg font-bold text-gray-900">250K+</p>
             <p className="text-[10px] text-gray-500">
-              Parts, specs, cross-refs, BOMs
+              TDS, specs, cross-refs, BOMs
             </p>
           </div>
           <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-              Gross margin
+              Trust layers
             </p>
-            <p className="mt-1 text-lg font-bold text-emerald-600">96%</p>
+            <p className="mt-1 text-lg font-bold text-emerald-600">4</p>
             <p className="text-[10px] text-gray-500">
-              Profitable from customer #1
+              Graph → RAG → Claude → Guardrails
             </p>
           </div>
         </div>

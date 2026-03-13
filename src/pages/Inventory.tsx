@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, InventoryItem, ReorderAlert } from "@/lib/api";
+import { DEMO_INVENTORY, DEMO_REORDER_ALERTS } from "@/lib/demoData";
 import { formatNumber, cn } from "@/lib/utils";
 import { useState } from "react";
 
@@ -30,13 +31,23 @@ export default function Inventory() {
     enabled: activeTab === "reorder",
   });
 
+  const useFallbackStock = stockError || (!stockLoading && !stockData);
+  const useFallbackAlerts = alertsError || (!alertsLoading && !alerts && activeTab === "reorder");
+
   const tabs: Array<{ key: Tab; label: string; count?: number }> = [
     { key: "stock", label: "Stock Levels" },
-    { key: "reorder", label: "Reorder Alerts", count: alerts?.length },
+    { key: "reorder", label: "Reorder Alerts", count: useFallbackAlerts ? DEMO_REORDER_ALERTS.length : alerts?.length },
   ];
 
   return (
     <div className="space-y-6">
+      {/* Demo Mode Banner */}
+      {(useFallbackStock || useFallbackAlerts) && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-700">
+          <span className="font-semibold">Demo Mode</span> — Showing sample data. Connect backend for live data.
+        </div>
+      )}
+
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-montserrat font-bold text-neutral-900">
@@ -73,11 +84,11 @@ export default function Inventory() {
       {/* Stock Levels Tab */}
       {activeTab === "stock" && (
         <StockLevelsTab
-          data={stockData}
+          data={useFallbackStock ? { items: DEMO_INVENTORY, total: DEMO_INVENTORY.length, page: 1, page_size: 20, total_pages: 1 } : stockData}
           isLoading={stockLoading}
-          isError={stockError}
-          error={stockErr}
-          page={stockPage}
+          isError={false}
+          error={null}
+          page={useFallbackStock ? 1 : stockPage}
           onPageChange={setStockPage}
         />
       )}
@@ -85,10 +96,10 @@ export default function Inventory() {
       {/* Reorder Alerts Tab */}
       {activeTab === "reorder" && (
         <ReorderAlertsTab
-          data={alerts}
+          data={useFallbackAlerts ? DEMO_REORDER_ALERTS : alerts}
           isLoading={alertsLoading}
-          isError={alertsError}
-          error={alertsErr}
+          isError={false}
+          error={null}
         />
       )}
     </div>

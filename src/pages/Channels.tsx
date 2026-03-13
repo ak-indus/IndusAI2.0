@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, ChannelMessage, EscalationTicket } from "@/lib/api";
+import { DEMO_CHANNEL_STATS, DEMO_CHANNEL_MESSAGES, DEMO_ESCALATION_TICKETS } from "@/lib/demoData";
 import { useState } from "react";
 import { statusColor, cn, formatNumber } from "@/lib/utils";
 import {

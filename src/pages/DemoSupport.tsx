@@ -165,6 +165,11 @@ const TICKETS: Ticket[] = [
     status: "waiting-customer",
     assignedTo: "Sarah Chen",
     age: "3.5 hrs",
+    customerMessage:
+      "Hi, we're evaluating Mobil SHC 630 for our enclosed gear drives. Can you send us the full technical data sheet? We need to verify viscosity at operating temperature and the pour point before we can approve it for our cold-storage facility.",
+    aiDraft:
+      "Dear Delta Industrial Supply,\n\nThank you for your interest in the Mobil SHC 630. Here are the key specifications from the TDS:\n\n**Mobil SHC 630 — Synthetic Gear & Bearing Oil**\n• ISO Viscosity Grade: 220\n• Kinematic Viscosity @ 40°C: 220 cSt\n• Kinematic Viscosity @ 100°C: 26.0 cSt\n• Viscosity Index: 168 (excellent for wide temp range)\n• Pour Point: -39°C / -38°F — well suited for cold-storage\n• Flash Point: 266°C / 510°F\n• FZG Load Stage: 12+ (pass)\n• Bearing Life Extension: Up to 6x vs. mineral oils\n\n**Highlights for your application:**\n- Outstanding performance in enclosed gear drives at both high and low temperatures\n- The -39°C pour point makes it an excellent choice for cold-storage environments\n- PAO-based synthetic — compatible with standard gear drive seals\n\n**Download full TDS:** [Mobil SHC 630 TDS (PDF)](link)\n\nWe have this product in stock in both 5-gallon pails ($485/pail) and 55-gallon drums ($4,250/drum). Would you like a quote for your facility?\n\nBest regards,\nIndusAI Support",
+    confidence: 96,
   },
   {
     id: "TKT-2024-0309",
@@ -187,6 +192,11 @@ const TICKETS: Ticket[] = [
     status: "open",
     assignedTo: "Mike Torres",
     age: "5.2 hrs",
+    customerMessage:
+      "We currently use FAG 22310-E1-K spherical roller bearings in our heavy-duty conveyor pulleys. We're looking at switching to NSK to consolidate vendors. Can you provide the exact NSK cross-reference with load ratings and dimensions so our engineering team can approve the swap?",
+    aiDraft:
+      "Dear Summit Engineering LLC,\n\nGreat news — there is a direct NSK cross-reference for the FAG 22310-E1-K. Here's the comparison:\n\n**Cross-Reference: FAG 22310-E1-K → NSK 22310EAE4**\n\n| Specification | FAG 22310-E1-K | NSK 22310EAE4 |\n|--------------|----------------|----------------|\n| Type | Spherical Roller | Spherical Roller |\n| Bore (d) | 50mm | 50mm |\n| OD (D) | 110mm | 110mm |\n| Width (B) | 40mm | 40mm |\n| Dynamic Load (Cr) | 170 kN | 173 kN |\n| Static Load (C0r) | 166 kN | 170 kN |\n| Limiting Speed | 5,600 RPM | 5,600 RPM |\n| Cage | Pressed steel | Pressed steel |\n| Bore Type | Tapered 1:12 | Tapered 1:12 |\n\nThe NSK 22310EAE4 is a **drop-in replacement** with slightly higher load ratings (+1.7% dynamic, +2.4% static). Both use a tapered bore suitable for adapter sleeve mounting on your conveyor pulleys.\n\n**Availability & Pricing:**\n• FAG 22310-E1-K: In stock (8 units) — $89.50/ea\n• NSK 22310EAE4: In stock (14 units) — $82.75/ea (7.5% savings)\n\nThe NSK option saves $6.75/unit while meeting or exceeding all FAG specifications. Want me to prepare a quote for your next order quantity?\n\nBest regards,\nIndusAI Support",
+    confidence: 92,
   },
   {
     id: "TKT-2024-0307",

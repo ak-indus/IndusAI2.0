@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, DashboardMetrics } from "@/lib/api";
+import { DEMO_DASHBOARD_METRICS, DEMO_SALES_SUMMARY } from "@/lib/demoData";
 import { formatCurrency, formatNumber, statusColor, cn } from "@/lib/utils";
 import {
   BarChart,
@@ -129,12 +130,15 @@ function ChartTooltip({ active, payload, label, isCurrency = true }: ChartToolti
 /* ------------------------------------------------------------------ */
 
 function SalesTrendChart() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["salesSummary", "daily"],
     queryFn: () => api.getSalesSummary("daily"),
   });
 
-  if (isLoading || !data) {
+  const useFallback = isError || (!isLoading && !data);
+  const displayData = useFallback ? DEMO_SALES_SUMMARY : data;
+
+  if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-slate-400">
         Loading trend...
@@ -142,9 +146,11 @@ function SalesTrendChart() {
     );
   }
 
+  if (!displayData) return null;
+
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+      <LineChart data={displayData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
         <XAxis
           dataKey="period"
@@ -190,7 +196,10 @@ export default function Dashboard() {
     refetchInterval: 60_000,
   });
 
-  /* ---------- Loading & Error States ---------- */
+  const useFallback = isError || (!isLoading && !metrics);
+  const displayMetrics = useFallback ? DEMO_DASHBOARD_METRICS : metrics;
+
+  /* ---------- Loading State ---------- */
 
   if (isLoading) {
     return (
@@ -200,19 +209,11 @@ export default function Dashboard() {
     );
   }
 
-  if (isError) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <p className="text-lg text-red-500">
-          {error instanceof Error ? error.message : "Failed to load dashboard"}
-        </p>
-      </div>
-    );
-  }
-
-  if (!metrics) return null;
+  if (!displayMetrics) return null;
 
   /* ---------- Derived data ---------- */
+
+  const metrics = displayMetrics;
 
   const kpiCards: KpiCard[] = [
     {
@@ -304,6 +305,13 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Demo Mode Banner */}
+      {useFallback && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-700">
+          <span className="font-semibold">Demo Mode</span> — Showing sample data. Connect backend for live data.
+        </div>
+      )}
+
       {/* Page Header */}
       <div>
         <h1 className="font-montserrat text-2xl font-bold text-slate-900">
