@@ -1,191 +1,233 @@
 #!/usr/bin/env python3
 """
-B2B AI Chatbot MVP - Production-Ready Version
-A secure, scalable chatbot for B2B customer support
+MRO Platform — Agentic Back-Office / Middle-Office Operating System
+for Industrial MRO Distributors.
+
+Modules: Product Catalog, Inventory, Orders (O2C), Quotes, Pricing,
+Procurement (P2P), Invoicing, Payments, RMA/Returns, Workflows, Analytics.
+Omnichannel conversational interface (WhatsApp, Web, Email, SMS).
 """
 
 import os
 import re
 import json
-import asyncio
+import hashlib
+import hmac
 import logging
 import time
 import uuid
-import html
-import hashlib
-import hmac
-import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional, Tuple, Any, Union
+from pathlib import Path
+from typing import Optional
+from contextlib import asynccontextmanager
 
-# FastAPI and web framework
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, Query, Header, Depends, status
-from fastapi.responses import JSONResponse, HTMLResponse, Response
+# FastAPI
+from fastapi import (
+    FastAPI, Request, HTTPException, BackgroundTasks,
+    Query, Header, Depends,
+)
+from fastapi.responses import HTMLResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-from contextlib import asynccontextmanager
+
+# Validation & config
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
 
 # Rate limiting
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-# HTTP client
-import httpx
-
-# JWT for authentication
+# JWT
 import jwt
 
-# NLP and AI
-from fuzzywuzzy import fuzz
+# Monitoring
+from prometheus_client import generate_latest
 
+# Internal modules
 from metrics.metrics import ERROR_COUNTER
-from models.models import BotResponse, ChannelType, CustomerMessage, MessageRequest
+from models.models import ChannelType, MessageRequest
 from services.ai_service import AIService
 from services.business_logic import BusinessLogic
 from services.chatbot_engine import ChatbotEngine
 from services.communication_manager import CommunicationManager
 from services.database_manager import DatabaseManager
+from services.escalation_service import EscalationService
 from services.intent_classifier import IntentClassifier
 from services.spam_detector import spam_detector
-from services.escalation_service import EscalationService
-try:
-    import anthropic
-    ANTHROPIC_AVAILABLE = True
-except ImportError:
-    ANTHROPIC_AVAILABLE = False
 
-# Database and caching
+# Platform services
+from services.platform.erp_connector import MockERPConnector
+from services.platform.workflow_engine import WorkflowEngine
+from services.platform.product_service import ProductService
+from services.platform.inventory_service import InventoryService
+from services.platform.customer_service import CustomerService
+from services.platform.pricing_service import PricingService
+from services.platform.order_service import OrderService
+from services.platform.quote_service import QuoteService
+from services.platform.procurement_service import ProcurementService
+from services.platform.invoice_service import InvoiceService
+from services.platform.rma_service import RMAService
+from services.platform.analytics_service import AnalyticsService
+from routes.platform import router as platform_router, set_services
 
+# Knowledge Graph & GraphRAG
+from services.graph.neo4j_client import Neo4jClient
+from services.graph.graph_service import GraphService
+from services.graph.sync import GraphSyncService
+from services.graph.tds_sds_service import TDSSDSGraphService
+from services.ai.claude_client import ClaudeClient
+from services.ai.embedding_client import VoyageEmbeddingClient
+from services.ai.llm_router import LLMRouter
+from services.ai.entity_extractor import EntityExtractor
+from services.ai.part_number_parser import PartNumberParser
+from services.graphrag.query_engine import GraphRAGQueryEngine
+from routes.graph import router as graph_router, set_graph_services
 
-# Environment and configuration
-from pydantic_settings import BaseSettings
-from dotenv import load_dotenv
+# ---------------------------------------------------------------------------
+# Environment
+# ---------------------------------------------------------------------------
 
-# Monitoring
-from prometheus_client import Counter, Histogram, Gauge, generate_latest
-
-# Load environment variables
 load_dotenv()
 
-# Configure logging with security filter
-class SecurityFilter(logging.Filter):
-    """Filter sensitive data from logs"""
-    
+APP_VERSION = "3.0.0"
+BASE_DIR = Path(__file__).resolve().parent
+
+# ---------------------------------------------------------------------------
+# Logging with sensitive-data redaction
+# ---------------------------------------------------------------------------
+
+
+class _SecurityFilter(logging.Filter):
+    """Redact API keys, phone numbers, and emails from log output."""
+
+    _patterns = [
+        (re.compile(r'(api_key|token|password|secret)=["\']?([^"\'\s]+)'), r'\1=***REDACTED***'),
+        (re.compile(r'\b\d{10,}\b'), '***PHONE***'),
+        (re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'), '***EMAIL***'),
+    ]
+
     def filter(self, record):
         if hasattr(record, 'msg'):
-            record.msg = self._redact_sensitive(str(record.msg))
+            msg = str(record.msg)
+            for pattern, replacement in self._patterns:
+                msg = pattern.sub(replacement, msg)
+            record.msg = msg
         return True
-    
-    def _redact_sensitive(self, text):
-        # Redact API keys and passwords
-        text = re.sub(r'(api_key|token|password|secret)=["\']?([^"\'\s]+)', r'\1=***REDACTED***', text)
-        # Redact phone numbers
-        text = re.sub(r'\b\d{10,}\b', '***PHONE***', text)
-        # Redact email addresses
-        text = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', '***EMAIL***', text)
-        return text
 
-# Configure logging
+
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
-logger = logging.getLogger(__name__)
-security_filter = SecurityFilter()
-logger.addFilter(security_filter)
+logger = logging.getLogger("mro_platform")
+logger.addFilter(_SecurityFilter())
 
-# =======================
+# ---------------------------------------------------------------------------
 # Configuration
-# =======================
+# ---------------------------------------------------------------------------
+
 
 class Settings(BaseSettings):
-    """Application settings from environment variables"""
-    
-    # Basic app config
-    app_name: str = "B2B AI Chatbot MVP"
-    debug: bool = Field(default=False, env="DEBUG")
-    secret_key: str = Field(default="dev-secret-key-change-in-production", env="SECRET_KEY")
-    admin_api_key: Optional[str] = Field(default=None, env="ADMIN_API_KEY")
-    
-    # Database URLs
-    database_url: str = Field(default="postgresql://chatbot:password@localhost:5432/chatbot", env="DATABASE_URL")
-    redis_url: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
-    
+    """All application settings, loaded from environment or .env file."""
+
+    # App
+    app_name: str = "MRO Platform"
+    debug: bool = Field(default=False)
+    secret_key: str = Field(default=...)
+
+    # Admin
+    admin_api_key: Optional[str] = Field(default=None)
+
+    # Database
+    database_url: str = Field(default="postgresql://chatbot:password@localhost:5432/chatbot")
+    redis_url: str = Field(default="redis://localhost:6379/0")
+
     # WhatsApp Business API
     whatsapp_api_url: str = "https://graph.facebook.com/v18.0"
-    whatsapp_phone_number_id: Optional[str] = Field(default=None, env="WHATSAPP_PHONE_NUMBER_ID")
-    whatsapp_access_token: Optional[str] = Field(default=None, env="WHATSAPP_ACCESS_TOKEN")
-    whatsapp_webhook_verify_token: Optional[str] = Field(default=None, env="WHATSAPP_WEBHOOK_VERIFY_TOKEN")
-    whatsapp_app_secret: Optional[str] = Field(default=None, env="WHATSAPP_APP_SECRET")
-    
+    whatsapp_phone_number_id: Optional[str] = Field(default=None)
+    whatsapp_access_token: Optional[str] = Field(default=None)
+    whatsapp_webhook_verify_token: Optional[str] = Field(default=None)
+    whatsapp_app_secret: Optional[str] = Field(default=None)
+
     # Anthropic AI
-    anthropic_api_key: Optional[str] = Field(default=None, env="ANTHROPIC_API_KEY")
-    ai_model: str = Field(default="claude-3-5-sonnet-20241022", env="AI_MODEL")
-    ai_max_retries: int = Field(default=3, env="AI_MAX_RETRIES")
-    ai_retry_delay: float = Field(default=1.0, env="AI_RETRY_DELAY")
+    anthropic_api_key: Optional[str] = Field(default=None)
+    ai_model: str = Field(default="claude-3-5-sonnet-20241022")
+    ai_max_retries: int = Field(default=3)
+    ai_retry_delay: float = Field(default=1.0)
 
-    # Support contact info (configurable)
-    support_email: str = Field(default="support@company.com", env="SUPPORT_EMAIL")
-    support_phone: str = Field(default="1-800-TECH-HELP", env="SUPPORT_PHONE")
+    # Support contact info
+    support_email: str = Field(default="support@company.com")
+    support_phone: str = Field(default="1-800-TECH-HELP")
 
-    # Circuit breaker settings
-    circuit_breaker_threshold: int = Field(default=5, env="CIRCUIT_BREAKER_THRESHOLD")
-    circuit_breaker_timeout: int = Field(default=60, env="CIRCUIT_BREAKER_TIMEOUT")
+    # Circuit breaker
+    circuit_breaker_threshold: int = Field(default=5)
+    circuit_breaker_timeout: int = Field(default=60)
 
-    # Email settings
-    smtp_host: str = Field(default="localhost", env="SMTP_HOST")
-    smtp_port: int = Field(default=587, env="SMTP_PORT")
-    smtp_username: Optional[str] = Field(default=None, env="SMTP_USERNAME")
-    smtp_password: Optional[str] = Field(default=None, env="SMTP_PASSWORD")
-    
+    # Email (SMTP)
+    smtp_host: str = Field(default="localhost")
+    smtp_port: int = Field(default=587)
+    smtp_username: Optional[str] = Field(default=None)
+    smtp_password: Optional[str] = Field(default=None)
+
     # Rate limiting
-    rate_limit_per_minute: int = Field(default=60, env="RATE_LIMIT_PER_MINUTE")
-    
+    rate_limit_per_minute: int = Field(default=60)
+
+    # Knowledge Graph (Neo4j)
+    neo4j_uri: str = Field(default="bolt://localhost:7687")
+    neo4j_user: str = Field(default="neo4j")
+    neo4j_password: str = Field(default="password")
+
+    # Voyage AI (embeddings)
+    voyage_api_key: Optional[str] = Field(default=None)
+
     @field_validator('secret_key')
     @classmethod
-    def validate_secret_key(cls, v: str) -> str:
+    def _validate_secret_key(cls, v: str) -> str:
         if len(v) < 32:
-            raise ValueError("Secret key must be at least 32 characters")
-        if v == "dev-secret-key-change-in-production":
-            raise ValueError("Must change secret key in production")
+            raise ValueError("SECRET_KEY must be at least 32 characters")
         return v
-    
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = 'ignore'
 
-# Initialize settings
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",
+    }
+
+
 settings = Settings()
 
-# =======================
-# Rate Limiting Setup
-# =======================
+# ---------------------------------------------------------------------------
+# Rate limiter
+# ---------------------------------------------------------------------------
 
 limiter = Limiter(key_func=get_remote_address)
 
-# =======================
-# Security
-# =======================
+# ---------------------------------------------------------------------------
+# JWT Authentication
+# ---------------------------------------------------------------------------
 
-security = HTTPBearer()
+_http_bearer = HTTPBearer()
+
 
 def create_admin_token(user_id: str) -> str:
-    """Create admin JWT token"""
+    """Issue a 24-hour admin JWT."""
     payload = {
         "user_id": user_id,
         "role": "admin",
-        "exp": datetime.now(timezone.utc) + timedelta(hours=24)
+        "exp": datetime.now(timezone.utc) + timedelta(hours=24),
     }
     return jwt.encode(payload, settings.secret_key, algorithm="HS256")
 
-async def verify_admin_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Verify admin API token"""
-    token = credentials.credentials
+
+async def verify_admin_token(
+    credentials: HTTPAuthorizationCredentials = Depends(_http_bearer),
+):
+    """FastAPI dependency that validates an admin JWT."""
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
+        payload = jwt.decode(credentials.credentials, settings.secret_key, algorithms=["HS256"])
         if payload.get("role") != "admin":
             raise HTTPException(status_code=403, detail="Insufficient permissions")
         return payload
@@ -194,223 +236,519 @@ async def verify_admin_token(credentials: HTTPAuthorizationCredentials = Depends
     except jwt.PyJWTError:
         raise HTTPException(status_code=403, detail="Invalid authentication")
 
-def verify_whatsapp_signature(request_body: bytes, signature: str) -> bool:
-    """Verify WhatsApp webhook signature"""
+
+def _verify_whatsapp_signature(request_body: bytes, signature: str) -> bool:
+    """Verify Meta webhook HMAC-SHA256 signature."""
     if not settings.whatsapp_app_secret:
         return False
-    
-    expected_signature = hmac.new(
+    expected = hmac.new(
         settings.whatsapp_app_secret.encode(),
         request_body,
-        hashlib.sha256
+        hashlib.sha256,
     ).hexdigest()
-    
-    return hmac.compare_digest(expected_signature, signature)
+    return hmac.compare_digest(expected, signature)
 
-# Global database manager
+
+# ---------------------------------------------------------------------------
+# Service wiring (dependency graph)
+# ---------------------------------------------------------------------------
+
 db_manager = DatabaseManager(logger=logger, settings=settings)
-
-# Global classifier
 classifier = IntentClassifier()
-
-# Global AI service
 ai_service = AIService(logger=logger, settings=settings)
-
-# Global escalation service
 escalation_service = EscalationService(settings=settings, logger=logger, db_manager=db_manager)
+comm_manager = CommunicationManager(logger=logger, settings=settings)
 
-# Global business logic (with settings and escalation service)
+# Platform services — initialised after DB pool is ready (see lifespan)
+erp_connector = MockERPConnector()
+workflow_engine = WorkflowEngine(db_manager, logger)
+product_service = ProductService(db_manager, logger)
+inventory_service = InventoryService(db_manager, logger)
+customer_service = CustomerService(db_manager, logger)
+pricing_service = PricingService(db_manager, logger)
+order_service = OrderService(db_manager, customer_service, pricing_service,
+                             inventory_service, workflow_engine, logger)
+quote_service = QuoteService(db_manager, pricing_service, order_service, logger)
+procurement_service = ProcurementService(db_manager, inventory_service, workflow_engine, logger)
+invoice_service = InvoiceService(db_manager, customer_service, logger)
+rma_service = RMAService(db_manager, inventory_service, workflow_engine, logger)
+analytics_service = AnalyticsService(db_manager, logger)
+
+# Knowledge Graph services — initialised in lifespan after Neo4j connects
+neo4j_client = Neo4jClient(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password)
+graph_service = GraphService(neo4j_client)
+tds_sds_service = TDSSDSGraphService(neo4j_client)
+
+# AI services for GraphRAG
+_claude_client = None
+_embedding_client = None
+_llm_router = None
+_query_engine = None
+
+if settings.anthropic_api_key:
+    _claude_client = ClaudeClient(
+        api_key=settings.anthropic_api_key,
+        max_retries=settings.ai_max_retries,
+        retry_delay=settings.ai_retry_delay,
+        circuit_breaker_threshold=settings.circuit_breaker_threshold,
+        circuit_breaker_timeout=settings.circuit_breaker_timeout,
+    )
+
+if settings.voyage_api_key:
+    _embedding_client = VoyageEmbeddingClient(api_key=settings.voyage_api_key)
+
+if _claude_client:
+    _llm_router = LLMRouter(
+        claude_client=_claude_client,
+        embedding_client=_embedding_client,
+    )
+
+_entity_extractor = EntityExtractor()
+_part_parser = PartNumberParser()
+graph_sync = GraphSyncService(graph_service, _embedding_client)
+
+# Intent classifier adapter for GraphRAG (bridges old IntentClassifier → AI models)
+class _GraphIntentClassifier:
+    """Adapts the LLM router to classify intents for the GraphRAG pipeline."""
+    def __init__(self, llm_router):
+        self._llm = llm_router
+
+    async def classify_intent(self, message: str):
+        from services.ai.models import IntentResult, IntentType
+        from services.ai.prompts import INTENT_CLASSIFICATION_PROMPT
+        if not self._llm:
+            return IntentResult(intent=IntentType.GENERAL_QUERY, confidence=0.5)
+        try:
+            response = await self._llm.chat(
+                messages=[{"role": "user", "content": INTENT_CLASSIFICATION_PROMPT.format(message=message)}],
+                task="intent_classification",
+                max_tokens=100,
+                temperature=0.1,
+            )
+            import json as _json
+            data = _json.loads(response)
+            return IntentResult(
+                intent=IntentType(data.get("intent", "general_query")),
+                confidence=float(data.get("confidence", 0.5)),
+            )
+        except Exception:
+            return IntentResult(intent=IntentType.GENERAL_QUERY, confidence=0.5)
+
+_graph_intent_classifier = _GraphIntentClassifier(_llm_router)
+
+if _llm_router:
+    _query_engine = GraphRAGQueryEngine(
+        graph_service=graph_service,
+        llm_router=_llm_router,
+        intent_classifier=_graph_intent_classifier,
+        entity_extractor=_entity_extractor,
+        part_parser=_part_parser,
+        inventory_service=inventory_service,
+        pricing_service=pricing_service,
+    )
+
 business_logic = BusinessLogic(
     ai_service=ai_service,
     db_manager=db_manager,
     settings=settings,
-    escalation_service=escalation_service
+    escalation_service=escalation_service,
+    product_service=product_service,
+    inventory_service=inventory_service,
+    pricing_service=pricing_service,
+    order_service=order_service,
+    quote_service=quote_service,
+    customer_service=customer_service,
+    rma_service=rma_service,
+    query_engine=_query_engine,
 )
-
-# Global communication manager
-comm_manager = CommunicationManager(logger=logger, settings=settings)
-
-# Global chatbot engine
 chatbot = ChatbotEngine(
     logger=logger,
     business_logic=business_logic,
     classifier=classifier,
     db_manager=db_manager,
-    settings=settings
+    settings=settings,
 )
 
-# =======================
-# FastAPI Application
-# =======================
+# ---------------------------------------------------------------------------
+# FastAPI application
+# ---------------------------------------------------------------------------
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan manager"""
-    # Startup
-    logger.info("Starting B2B AI Chatbot MVP")
+    """Startup / shutdown lifecycle."""
+    logger.info(f"Starting {settings.app_name} v{APP_VERSION}")
     app.state.start_time = time.time()
     app.state.request_count = 0
-    
-    # Initialize database
+
     await db_manager.initialize()
-    
-    # Generate admin token for development
-    if settings.debug and not settings.admin_api_key:
-        admin_token = create_admin_token("admin")
-        logger.info(f"Development admin token: {admin_token}")
-    
+
+    # Create platform tables & indexes
+    if db_manager.pool:
+        try:
+            from services.platform.schema import PLATFORM_SCHEMA, PLATFORM_INDEXES
+            async with db_manager.pool.acquire() as conn:
+                await conn.execute(PLATFORM_SCHEMA)
+                await conn.execute(PLATFORM_INDEXES)
+            logger.info("Platform schema ready")
+        except Exception as e:
+            logger.error(f"Platform schema creation failed: {e}")
+
+    # Connect to Neo4j knowledge graph
+    try:
+        await neo4j_client.connect()
+        from services.graph.schema import create_schema
+        await create_schema(neo4j_client)
+        set_graph_services(graph_service, graph_sync)
+        logger.info("Neo4j knowledge graph connected and schema ready")
+
+        # Seed demo graph data in debug mode
+        if settings.debug:
+            from services.graph.seed_demo import seed_graph
+            seed_stats = await seed_graph(graph_service, _embedding_client)
+            logger.info("Graph seed: %s", seed_stats)
+    except Exception as e:
+        logger.warning("Neo4j connection failed (non-fatal, graph features disabled): %s", e)
+
+    # Inject services into the platform API router
+    set_services({
+        "product_service": product_service,
+        "inventory_service": inventory_service,
+        "customer_service": customer_service,
+        "pricing_service": pricing_service,
+        "order_service": order_service,
+        "quote_service": quote_service,
+        "procurement_service": procurement_service,
+        "invoice_service": invoice_service,
+        "rma_service": rma_service,
+        "workflow_engine": workflow_engine,
+        "analytics_service": analytics_service,
+    })
+
+    # Seed demo data in debug mode
+    if settings.debug and db_manager.pool:
+        try:
+            from services.platform.seed import seed_database
+            await seed_database(
+                db_manager, product_service, pricing_service,
+                customer_service, procurement_service,
+                inventory_service, logger,
+            )
+        except Exception as e:
+            logger.error(f"Seed failed: {e}")
+
+    if settings.debug:
+        token = create_admin_token("admin")
+        logger.info(f"Dev admin token: {token}")
+
     yield
-    
-    # Shutdown
-    logger.info("Shutting down B2B AI Chatbot MVP")
+
+    logger.info(f"Shutting down {settings.app_name}")
+    await neo4j_client.close()
     await db_manager.close()
     await comm_manager.close()
+    if _embedding_client:
+        await _embedding_client.close()
 
-# Create FastAPI app
+
 app = FastAPI(
-    title="B2B AI Chatbot MVP",
-    description="Production-ready B2B customer service chatbot with AI enhancement",
-    version="1.1.0",
-    lifespan=lifespan
+    title="MRO Platform API",
+    description="Agentic Back-Office / Middle-Office Operating System for Industrial MRO Distributors",
+    version=APP_VERSION,
+    lifespan=lifespan,
 )
 
-# Add rate limiter to app state
+# Platform API routes
+app.include_router(platform_router)
+app.include_router(graph_router)
+
+# Rate limiter
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Add middleware
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://*.yourdomain.com", "http://localhost:3000"] if not settings.debug else ["*"],
+    allow_origins=["*"] if settings.debug else ["https://*.yourdomain.com", "http://localhost:3000"],
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
-    max_age=86400
+    max_age=86400,
 )
 
-# Request counting middleware
+
 @app.middleware("http")
-async def count_requests(request: Request, call_next):
-    app.state.request_count += 1
+async def _security_headers(request: Request, call_next):
     response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    if not settings.debug:
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+    app.state.request_count += 1
     return response
 
-# =======================
+
+# ===========================================================================
 # Health & Monitoring
-# =======================
+# ===========================================================================
+
 
 @app.get("/health")
 async def health_check():
-    """Basic health check endpoint"""
     return {
         "status": "healthy",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "version": "1.1.0",
-        "uptime_seconds": int(time.time() - app.state.start_time)
+        "version": APP_VERSION,
+        "uptime_seconds": int(time.time() - app.state.start_time),
     }
+
 
 @app.get("/health/detailed", dependencies=[Depends(verify_admin_token)])
 async def detailed_health_check():
-    """Detailed health check for monitoring systems"""
     db_healthy = False
     redis_healthy = False
-    
     db_error = None
     redis_error = None
 
-    # Check database
     if db_manager.pool:
         try:
             async with db_manager.pool.acquire() as conn:
                 await conn.fetchval("SELECT 1")
-                db_healthy = True
+            db_healthy = True
         except Exception as e:
             db_error = str(e)
-            logger.warning(f"Database health check failed: {e}")
 
-    # Check Redis
     if db_manager.redis_client:
         try:
             await db_manager.redis_client.ping()
             redis_healthy = True
         except Exception as e:
             redis_error = str(e)
-            logger.warning(f"Redis health check failed: {e}")
-    
+
     return {
         "status": "healthy" if (db_healthy or not db_manager.pool) else "degraded",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "version": "1.1.0",
+        "version": APP_VERSION,
         "services": {
             "database": {
                 "connected": db_manager.pool is not None,
                 "healthy": db_healthy,
                 "pool_size": db_manager.pool.get_size() if db_manager.pool else 0,
-                "error": db_error
+                "error": db_error,
             },
             "redis": {
                 "connected": db_manager.redis_client is not None,
                 "healthy": redis_healthy,
-                "error": redis_error
+                "error": redis_error,
             },
-            "whatsapp": {
-                "configured": bool(settings.whatsapp_access_token)
-            },
+            "neo4j": await neo4j_client.health_check(),
+            "whatsapp": {"configured": bool(settings.whatsapp_access_token)},
             "ai": {
                 "available": ai_service.client is not None,
-                "circuit_breaker": ai_service.get_circuit_breaker_state()
-            }
+                "circuit_breaker": ai_service.get_circuit_breaker_state(),
+            },
         },
         "metrics": {
             "uptime_seconds": time.time() - app.state.start_time,
-            "total_requests": app.state.request_count
+            "total_requests": app.state.request_count,
         },
-        "escalation": escalation_service.get_stats()
+        "escalation": escalation_service.get_stats(),
     }
 
+
 @app.get("/metrics")
-async def metrics():
-    """Prometheus metrics endpoint"""
+async def prometheus_metrics():
     return Response(generate_latest(), media_type="text/plain")
 
-# =======================
-# API Endpoints
-# =======================
+
+# ===========================================================================
+# Root
+# ===========================================================================
+
 
 @app.get("/")
 async def root():
-    """Root endpoint"""
     return {
-        "service": "B2B AI Chatbot MVP",
-        "version": "1.1.0",
+        "service": settings.app_name,
+        "version": APP_VERSION,
         "status": "running",
         "documentation": "/docs",
         "health": "/health",
         "features": [
-            "WhatsApp Business integration",
-            "AI-enhanced responses",
-            "Intent classification",
-            "Rate limiting",
-            "Session management",
-            "Admin dashboard",
-            "Prometheus metrics"
-        ]
+            "Product Catalog & Search",
+            "Inventory Management & Reorder Alerts",
+            "Order-to-Cash (Orders, Quotes, Fulfillment)",
+            "Procure-to-Pay (POs, Goods Receipt, Suppliers)",
+            "Dynamic Pricing Engine & Customer Contracts",
+            "Invoicing, Payments & AR Aging",
+            "RMA / Returns Processing",
+            "Workflow Approvals Engine",
+            "Analytics & Dashboard Metrics",
+            "AI-enhanced Conversational Interface (Claude)",
+            "WhatsApp Business Integration",
+            "Prometheus Metrics & Admin Dashboard",
+            "Neo4j Knowledge Graph (Parts, Cross-refs, BOMs)",
+            "GraphRAG 5-Stage Query Engine (Intent → Graph → Vector → Context → LLM)",
+            "ChemPoint Industrial Product Ingestion",
+        ],
     }
 
-async def _process_message_internal(request: Request, message_request: MessageRequest):
-    """Internal message processing logic (shared by versioned and legacy endpoints)"""
-    # Check for spam using centralized spam detector
-    is_spam, spam_reason = spam_detector.is_spam(message_request.content)
-    if is_spam:
-        logger.warning(f"Spam message rejected: {spam_reason}")
+
+# ===========================================================================
+# Channels / Omnichannel API
+# ===========================================================================
+
+
+@platform_router.get("/channels/messages")
+async def get_channel_messages(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    channel: Optional[str] = Query(None, pattern="^(whatsapp|email|web|sms)$"),
+):
+    """Get paginated message history with optional channel filter."""
+    if not db_manager.pool:
+        return {"items": [], "total": 0, "page": page, "page_size": page_size, "total_pages": 0}
+
+    async with db_manager.pool.acquire() as conn:
+        where = "WHERE channel = $3" if channel else ""
+        params_count: list = [page_size, (page - 1) * page_size]
+        params_rows: list = [page_size, (page - 1) * page_size]
+        if channel:
+            params_count.append(channel)
+            params_rows.append(channel)
+
+        total = await conn.fetchval(
+            f"SELECT COUNT(*) FROM messages {where}",
+            *([channel] if channel else []),
+        )
+        rows = await conn.fetch(
+            f"""
+            SELECT id, from_id, content, channel, message_type, confidence,
+                   response_content, response_time, timestamp
+            FROM messages {where}
+            ORDER BY timestamp DESC
+            LIMIT $1 OFFSET $2
+            """,
+            page_size, (page - 1) * page_size,
+            *([channel] if channel else []),
+        )
+        items = [dict(r) for r in rows]
+        for item in items:
+            if item.get("id"):
+                item["id"] = str(item["id"])
+            if item.get("timestamp"):
+                item["timestamp"] = item["timestamp"].isoformat()
+
+    import math as _math
+    total_pages = _math.ceil(total / page_size) if total else 0
+    return {"items": items, "total": total, "page": page, "page_size": page_size, "total_pages": total_pages}
+
+
+@platform_router.get("/channels/stats")
+async def get_channel_stats():
+    """Get per-channel message counts and aggregate metrics."""
+    if not db_manager.pool:
+        return {"channels": {}, "total_messages": 0, "total_escalations": 0}
+
+    async with db_manager.pool.acquire() as conn:
+        channel_rows = await conn.fetch(
+            """
+            SELECT channel, COUNT(*) as message_count,
+                   AVG(response_time) as avg_response_time,
+                   AVG(confidence) as avg_confidence,
+                   MAX(timestamp) as last_message_at
+            FROM messages
+            GROUP BY channel
+            ORDER BY message_count DESC
+            """
+        )
+        total = await conn.fetchval("SELECT COUNT(*) FROM messages")
+        escalation_count = await conn.fetchval(
+            "SELECT COUNT(*) FROM escalation_tickets WHERE status IN ('open', 'in_progress')"
+        )
+        total_escalations = await conn.fetchval("SELECT COUNT(*) FROM escalation_tickets")
+
+    channels = {}
+    for row in channel_rows:
+        channels[row["channel"]] = {
+            "message_count": row["message_count"],
+            "avg_response_time": round(float(row["avg_response_time"] or 0), 2),
+            "avg_confidence": round(float(row["avg_confidence"] or 0), 2),
+            "last_message_at": row["last_message_at"].isoformat() if row["last_message_at"] else None,
+        }
+
+    return {
+        "channels": channels,
+        "total_messages": total or 0,
+        "open_escalations": escalation_count or 0,
+        "total_escalations": total_escalations or 0,
+    }
+
+
+@platform_router.get("/channels/escalations")
+async def get_escalation_tickets(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    status: Optional[str] = Query(None, pattern="^(open|in_progress|resolved|closed)$"),
+):
+    """Get escalation tickets with optional status filter."""
+    if not db_manager.pool:
+        return {"items": [], "total": 0, "page": page, "page_size": page_size, "total_pages": 0}
+
+    async with db_manager.pool.acquire() as conn:
+        where = "WHERE status = $3" if status else ""
+
+        total = await conn.fetchval(
+            f"SELECT COUNT(*) FROM escalation_tickets {where}",
+            *([status] if status else []),
+        )
+        rows = await conn.fetch(
+            f"""
+            SELECT id, customer_id, subject, description, priority, status,
+                   assigned_to, created_at, updated_at
+            FROM escalation_tickets {where}
+            ORDER BY
+                CASE priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
+                created_at DESC
+            LIMIT $1 OFFSET $2
+            """,
+            page_size, (page - 1) * page_size,
+            *([status] if status else []),
+        )
+        items = [dict(r) for r in rows]
+        for item in items:
+            if item.get("id"):
+                item["id"] = str(item["id"])
+            if item.get("created_at"):
+                item["created_at"] = item["created_at"].isoformat()
+            if item.get("updated_at"):
+                item["updated_at"] = item["updated_at"].isoformat()
+
+    import math as _math
+    total_pages = _math.ceil(total / page_size) if total else 0
+    return {"items": items, "total": total, "page": page, "page_size": page_size, "total_pages": total_pages}
+
+
+# ===========================================================================
+# Message API
+# ===========================================================================
+
+
+async def _process_message(message_request: MessageRequest) -> dict:
+    """Core message processing shared by API endpoints."""
+    is_spam_flag, spam_reason = spam_detector.is_spam(message_request.content)
+    if is_spam_flag:
+        logger.warning(f"Spam rejected: {spam_reason}")
         raise HTTPException(status_code=400, detail="Message rejected")
 
-    # Process message
     channel = ChannelType(message_request.channel)
     response = await chatbot.process_message(
         message_request.from_id,
         message_request.content,
-        channel
+        channel,
     )
 
     if response:
@@ -419,563 +757,240 @@ async def _process_message_internal(request: Request, message_request: MessageRe
             "response": {
                 "content": response.content,
                 "suggested_actions": response.suggested_actions,
-                "escalate": response.escalate
+                "escalate": response.escalate,
             },
-            "message_id": str(uuid.uuid4())
+            "message_id": str(uuid.uuid4()),
         }
-    else:
-        return {"success": False, "error": "Failed to process message"}
+
+    return {"success": False, "error": "Failed to process message"}
 
 
-# API v1 endpoints (versioned)
 @app.post("/api/v1/message")
 @limiter.limit(f"{settings.rate_limit_per_minute}/minute")
-async def process_api_message_v1(request: Request, message_request: MessageRequest):
-    """Process message via API (v1)"""
+async def process_message_v1(request: Request, message_request: MessageRequest):
+    """Process an incoming customer message (v1)."""
     try:
-        return await _process_message_internal(request, message_request)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return await _process_message(message_request)
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"API message error: {e}")
+        logger.error(f"API error: {e}", exc_info=True)
         ERROR_COUNTER.labels(error_type="api_error").inc()
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-# Legacy endpoint (deprecated, redirects to v1)
 @app.post("/api/message")
 @limiter.limit(f"{settings.rate_limit_per_minute}/minute")
-async def process_api_message(request: Request, message_request: MessageRequest):
-    """Process message via API (legacy - use /api/v1/message instead)"""
+async def process_message_legacy(request: Request, message_request: MessageRequest):
+    """Process message (legacy - use /api/v1/message instead)."""
     try:
-        result = await _process_message_internal(request, message_request)
-        # Add deprecation notice
-        result["_deprecation_notice"] = "This endpoint is deprecated. Please use /api/v1/message"
+        result = await _process_message(message_request)
+        result["_deprecation_notice"] = "This endpoint is deprecated. Use /api/v1/message."
         return result
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"API message error: {e}")
+        logger.error(f"API error: {e}", exc_info=True)
         ERROR_COUNTER.labels(error_type="api_error").inc()
         raise HTTPException(status_code=500, detail="Internal server error")
 
-# =======================
+
+# ===========================================================================
 # WhatsApp Webhook
-# =======================
+# ===========================================================================
+
 
 @app.get("/webhook/whatsapp")
 async def verify_whatsapp_webhook(
     hub_mode: str = Query(None, alias="hub.mode"),
     hub_verify_token: str = Query(None, alias="hub.verify_token"),
-    hub_challenge: str = Query(None, alias="hub.challenge")
+    hub_challenge: str = Query(None, alias="hub.challenge"),
 ):
-    """WhatsApp webhook verification"""
-    if (hub_mode == "subscribe" and 
-        hub_verify_token == settings.whatsapp_webhook_verify_token):
+    """Meta webhook verification handshake."""
+    if hub_mode == "subscribe" and hub_verify_token == settings.whatsapp_webhook_verify_token:
         logger.info("WhatsApp webhook verified")
         return int(hub_challenge)
-    
     raise HTTPException(status_code=403, detail="Webhook verification failed")
+
 
 @app.post("/webhook/whatsapp")
 @limiter.limit("100/minute")
 async def handle_whatsapp_webhook(
-    request: Request, 
+    request: Request,
     background_tasks: BackgroundTasks,
-    x_hub_signature: str = Header(None, alias="X-Hub-Signature-256")
+    x_hub_signature: str = Header(None, alias="X-Hub-Signature-256"),
 ):
-    """Handle incoming WhatsApp messages"""
+    """Receive and process incoming WhatsApp messages."""
     try:
-        # Get raw body for signature verification
         body = await request.body()
-        
-        # Verify signature if provided
+
         if x_hub_signature and settings.whatsapp_app_secret:
-            signature = x_hub_signature.replace("sha256=", "")
-            if not verify_whatsapp_signature(body, signature):
+            sig = x_hub_signature.replace("sha256=", "")
+            if not _verify_whatsapp_signature(body, sig):
                 logger.warning("Invalid WhatsApp webhook signature")
                 raise HTTPException(status_code=403, detail="Invalid signature")
-        
-        # Parse webhook data
+
         data = json.loads(body)
-        
-        if "entry" in data:
-            for entry in data["entry"]:
-                if "changes" in entry:
-                    for change in entry["changes"]:
-                        if change.get("field") == "messages":
-                            messages = change.get("value", {}).get("messages", [])
-                            for msg in messages:
-                                if msg.get("type") == "text":
-                                    background_tasks.add_task(
-                                        process_whatsapp_message,
-                                        msg["from"],
-                                        msg["text"]["body"]
-                                    )
-        
+
+        for entry in data.get("entry", []):
+            for change in entry.get("changes", []):
+                if change.get("field") != "messages":
+                    continue
+                for msg in change.get("value", {}).get("messages", []):
+                    if msg.get("type") == "text":
+                        background_tasks.add_task(
+                            _process_whatsapp_message,
+                            msg["from"],
+                            msg["text"]["body"],
+                        )
+
         return {"status": "received"}
-    
+
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON")
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"WhatsApp webhook error: {e}")
+        logger.error(f"WhatsApp webhook error: {e}", exc_info=True)
         ERROR_COUNTER.labels(error_type="webhook_error").inc()
-        return {"status": "error", "message": str(e)}
+        return {"status": "error"}
 
-async def process_whatsapp_message(from_number: str, text: str):
-    """Process incoming WhatsApp message"""
+
+async def _process_whatsapp_message(from_number: str, text: str):
+    """Background task: process a WhatsApp message and send the response."""
     try:
-        # Process through chatbot
         response = await chatbot.process_message(from_number, text, ChannelType.WHATSAPP)
-        
         if response:
-            # Send response via WhatsApp
-            success = await comm_manager.send_whatsapp_message(
-                from_number, 
-                response.content, 
-                response.suggested_actions
+            await comm_manager.send_whatsapp_message(
+                from_number, response.content, response.suggested_actions,
             )
-            
-            # Handle escalation
             if response.escalate:
-                logger.info(f"Escalation needed for {from_number}: {text[:50]}...")
-                # TODO: Implement escalation logic (create ticket, notify support, etc.)
-    
+                await escalation_service.create_ticket(
+                    customer_id=from_number,
+                    subject=f"WhatsApp escalation: {text[:100]}",
+                    description=text,
+                    priority="high",
+                )
     except Exception as e:
-        logger.error(f"WhatsApp message processing error: {e}")
-        # Send error message to user
+        logger.error(f"WhatsApp processing error: {e}", exc_info=True)
         await comm_manager.send_whatsapp_message(
             from_number,
-            "I apologize, but I encountered an error. Please try again or contact our support team."
+            "I apologize, but I encountered an error. Please try again or contact our support team.",
         )
 
-# =======================
+
+# ===========================================================================
 # Admin Dashboard
-# =======================
+# ===========================================================================
+
 
 @app.get("/admin/dashboard", response_class=HTMLResponse)
 @limiter.limit("30/minute")
 async def admin_dashboard(request: Request, token: str = Query(None)):
-    """Admin dashboard with optional token auth"""
-    # Require admin_api_key to be configured in production
+    """Serve the admin dashboard HTML."""
     if not settings.debug:
         if not settings.admin_api_key:
             raise HTTPException(status_code=503, detail="Admin dashboard not configured")
         if not token or token != settings.admin_api_key:
             raise HTTPException(status_code=403, detail="Unauthorized")
-    
-    html = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>B2B Chatbot Admin Dashboard</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>
-            * { box-sizing: border-box; margin: 0; padding: 0; }
-            body { 
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
-                background: #f0f2f5; 
-                color: #1a1a1a;
-            }
-            .header { 
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                color: white; 
-                padding: 2rem; 
-                text-align: center;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            }
-            .header h1 { margin-bottom: 0.5rem; }
-            .container { 
-                max-width: 1400px; 
-                margin: 0 auto; 
-                padding: 2rem;
-            }
-            .controls {
-                margin-bottom: 2rem;
-                display: flex;
-                gap: 1rem;
-                flex-wrap: wrap;
-            }
-            .btn {
-                background: #667eea;
-                color: white;
-                border: none;
-                padding: 0.75rem 1.5rem;
-                border-radius: 8px;
-                cursor: pointer;
-                font-size: 1rem;
-                transition: all 0.3s;
-            }
-            .btn:hover {
-                background: #5a6fd8;
-                transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-            }
-            .metrics { 
-                display: grid; 
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
-                gap: 1.5rem; 
-                margin-bottom: 2rem;
-            }
-            .metric-card { 
-                background: white; 
-                padding: 2rem; 
-                border-radius: 12px; 
-                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-                transition: transform 0.3s;
-            }
-            .metric-card:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-            }
-            .metric-value { 
-                font-size: 2.5rem; 
-                font-weight: bold; 
-                color: #667eea; 
-                margin-bottom: 0.5rem;
-            }
-            .metric-label { 
-                color: #666; 
-                font-size: 0.9rem;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-            .messages { 
-                background: white; 
-                border-radius: 12px; 
-                box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
-                overflow: hidden;
-            }
-            .messages h2 {
-                padding: 1.5rem;
-                border-bottom: 1px solid #eee;
-                color: #333;
-            }
-            table { 
-                width: 100%; 
-                border-collapse: collapse;
-            }
-            th, td { 
-                padding: 1rem 1.5rem; 
-                text-align: left; 
-                border-bottom: 1px solid #f0f0f0;
-            }
-            th { 
-                background: #f8f9fa; 
-                font-weight: 600;
-                color: #666;
-                text-transform: uppercase;
-                font-size: 0.85rem;
-                letter-spacing: 0.5px;
-            }
-            td { 
-                color: #333;
-            }
-            tr:hover {
-                background: #f8f9fa;
-            }
-            .confidence-badge {
-                display: inline-block;
-                padding: 0.25rem 0.75rem;
-                border-radius: 20px;
-                font-size: 0.85rem;
-                font-weight: 600;
-            }
-            .confidence-high { background: #d4edda; color: #155724; }
-            .confidence-medium { background: #fff3cd; color: #856404; }
-            .confidence-low { background: #f8d7da; color: #721c24; }
-            .status-indicator {
-                display: inline-block;
-                width: 8px;
-                height: 8px;
-                border-radius: 50%;
-                margin-right: 0.5rem;
-            }
-            .status-healthy { background: #28a745; }
-            .status-degraded { background: #ffc107; }
-            .status-error { background: #dc3545; }
-            .loading {
-                text-align: center;
-                padding: 2rem;
-                color: #666;
-            }
-            .error {
-                background: #f8d7da;
-                color: #721c24;
-                padding: 1rem;
-                border-radius: 8px;
-                margin: 1rem 0;
-            }
-            .token-input {
-                flex: 1;
-                min-width: 300px;
-                padding: 0.75rem 1rem;
-                border: 1px solid #ccc;
-                border-radius: 8px;
-                font-size: 1rem;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                outline: none;
-                transition: border-color 0.3s, box-shadow 0.3s;
-            }
 
-            .token-input:focus {
-                border-color: #667eea;
-                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-            }
+    template_path = BASE_DIR / "templates" / "dashboard.html"
+    return HTMLResponse(content=template_path.read_text(encoding="utf-8"))
 
-            .token-input::placeholder {
-                color: #999;
-                font-size: 0.95rem;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <h1>🤖 B2B Chatbot Admin Dashboard</h1>
-            <p>Monitor your AI customer service performance in real-time</p>
-        </div>
-        
-        <div class="container">
-            <div class="controls">
-                <input id="jwt-token" class="token-input" placeholder="Enter JWT Access Token" />
-                <button class="btn" onclick="setToken()">✅ Set Token</button>
-                <button class="btn" onclick="loadData()">🔄 Refresh</button>
-                <button class="btn" onclick="toggleAutoRefresh()">
-                    <span id="auto-refresh-status">▶️</span> Auto-refresh
-                </button>
-            </div>
-            
-            <div class="metrics" id="metrics">
-                <div class="metric-card">
-                    <div class="metric-value" id="total-messages">-</div>
-                    <div class="metric-label">Total Messages</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value" id="avg-confidence">-</div>
-                    <div class="metric-label">Avg Confidence</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value" id="avg-response-time">-</div>
-                    <div class="metric-label">Avg Response Time</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value" id="health-status">-</div>
-                    <div class="metric-label">System Health</div>
-                </div>
-            </div>
-            
-            <div class="messages">
-                <h2>Recent Messages</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>From</th>
-                            <th>Message</th>
-                            <th>Type</th>
-                            <th>Confidence</th>
-                            <th>Response Time</th>
-                        </tr>
-                    </thead>
-                    <tbody id="messages-tbody">
-                        <tr><td colspan="6" class="loading">Loading messages...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        <script>
-            let autoRefreshInterval = null;
-            let jwtToken = "";
-
-            function setToken() {
-                jwtToken = document.getElementById('jwt-token').value.trim();
-                if (!jwtToken) {
-                    alert('Please enter a valid JWT token');
-                } else {
-                    alert('JWT token set successfully!');
-                    loadData();
-                }
-            }
-            
-            async function loadData() {
-                try {
-                    const headers = jwtToken 
-                        ? { 'Authorization': 'Bearer ' + jwtToken }
-                        : {};
-                    
-                    // Load metrics
-                    const metricsResponse = await fetch('/admin/api/metrics', { headers });
-                    if (!metricsResponse.ok) throw new Error('Failed to load metrics');
-                    const metrics = await metricsResponse.json();
-                    
-                    // Update metric displays
-                    document.getElementById('total-messages').textContent = metrics.total_messages;
-                    document.getElementById('avg-confidence').textContent = (metrics.avg_confidence * 100).toFixed(1) + '%';
-                    document.getElementById('avg-response-time').textContent = (metrics.avg_response_time * 1000).toFixed(0) + 'ms';
-                    
-                    // Load health status
-                    const healthResponse = await fetch('/health', { headers });
-                    const health = await healthResponse.json();
-                    const healthEl = document.getElementById('health-status');
-                    healthEl.innerHTML = '<span class="status-indicator status-healthy"></span>Healthy';
-                    
-                    // Update messages table
-                    const tbody = document.getElementById('messages-tbody');
-                    if (metrics.recent_messages.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="6" class="loading">No messages yet</td></tr>';
-                    } else {
-                        tbody.innerHTML = metrics.recent_messages.map(msg => {
-                            const confidence = msg.confidence * 100;
-                            let confidenceClass = 'confidence-low';
-                            if (confidence >= 80) confidenceClass = 'confidence-high';
-                            else if (confidence >= 60) confidenceClass = 'confidence-medium';
-                            
-                            const timestamp = new Date(msg.timestamp);
-                            const timeStr = timestamp.toLocaleTimeString() + ' ' + timestamp.toLocaleDateString();
-                            
-                            return `
-                                <tr>
-                                    <td>${timeStr}</td>
-                                    <td>${msg.from_id}</td>
-                                    <td title="${msg.content}">${msg.content.substring(0, 50)}${msg.content.length > 50 ? '...' : ''}</td>
-                                    <td>${msg.message_type}</td>
-                                    <td><span class="confidence-badge ${confidenceClass}">${confidence.toFixed(0)}%</span></td>
-                                    <td>${(msg.response_time * 1000).toFixed(0)}ms</td>
-                                </tr>
-                            `;
-                        }).join('');
-                    }
-                } catch (error) {
-                    console.error('Failed to load data:', error);
-                    document.getElementById('messages-tbody').innerHTML = 
-                        '<tr><td colspan="6" class="error">Failed to load data. Please try again.</td></tr>';
-                }
-            }
-            
-            function toggleAutoRefresh() {
-                const statusEl = document.getElementById('auto-refresh-status');
-                if (autoRefreshInterval) {
-                    clearInterval(autoRefreshInterval);
-                    autoRefreshInterval = null;
-                    statusEl.textContent = '▶️';
-                } else {
-                    autoRefreshInterval = setInterval(loadData, 5000);
-                    statusEl.textContent = '⏸️';
-                }
-            }
-            
-            // Load data on page load
-            loadData();
-            
-            // Start auto-refresh
-            toggleAutoRefresh();
-        </script>
-    </body>
-    </html>
-    """
-    return html
 
 @app.get("/admin/api/metrics")
-async def get_admin_metrics(admin = Depends(verify_admin_token)):
-    """Get metrics for admin dashboard"""
+async def get_admin_metrics(admin=Depends(verify_admin_token)):
+    """Return dashboard metrics as JSON."""
     try:
         messages = await db_manager.get_recent_messages(100)
-        
-        total_messages = len(messages)
-        avg_confidence = sum(msg.get('confidence', 0) for msg in messages) / max(total_messages, 1)
-        avg_response_time = sum(msg.get('response_time', 0) for msg in messages) / max(total_messages, 1)
-        
-        # Calculate message type distribution
-        type_counts = {}
-        for msg in messages:
-            msg_type = msg.get('message_type', 'unknown')
-            type_counts[msg_type] = type_counts.get(msg_type, 0) + 1
-        
-        # Format recent messages for display
-        recent_messages = []
-        for msg in messages[:20]:  # Last 20 messages
-            recent_messages.append({
-                'timestamp': msg['timestamp'].isoformat() if msg['timestamp'] else datetime.now().isoformat(),
-                'from_id': msg['from_id'],
-                'content': msg['content'],
-                'message_type': msg['message_type'],
-                'confidence': msg['confidence'] or 0,
-                'response_time': msg['response_time'] or 0
-            })
-        
+
+        total = len(messages)
+        avg_confidence = sum(m.get('confidence', 0) for m in messages) / max(total, 1)
+        avg_response_time = sum(m.get('response_time', 0) for m in messages) / max(total, 1)
+
+        type_counts: dict = {}
+        for m in messages:
+            t = m.get('message_type', 'unknown')
+            type_counts[t] = type_counts.get(t, 0) + 1
+
+        recent = [
+            {
+                'timestamp': m['timestamp'].isoformat() if m.get('timestamp') else datetime.now(timezone.utc).isoformat(),
+                'from_id': m.get('from_id', ''),
+                'content': m.get('content', ''),
+                'message_type': m.get('message_type', 'unknown'),
+                'confidence': m.get('confidence') or 0,
+                'response_time': m.get('response_time') or 0,
+            }
+            for m in messages[:20]
+        ]
+
+        stats = escalation_service.get_stats()
+
         return {
-            "total_messages": total_messages,
+            "total_messages": total,
             "avg_confidence": avg_confidence,
             "avg_response_time": avg_response_time,
             "type_distribution": type_counts,
-            "recent_messages": recent_messages
+            "recent_messages": recent,
+            "escalation_count": stats.get("total_created", 0),
         }
-    
+
     except Exception as e:
-        logger.error(f"Metrics error: {e}")
+        logger.error(f"Metrics error: {e}", exc_info=True)
         return {
             "total_messages": 0,
             "avg_confidence": 0,
             "avg_response_time": 0,
             "type_distribution": {},
-            "recent_messages": []
+            "recent_messages": [],
+            "escalation_count": 0,
         }
 
-# =======================
-# Development/Testing Endpoints
-# =======================
+
+# ===========================================================================
+# Development / Testing Endpoints (debug mode only)
+# ===========================================================================
 
 if settings.debug:
+
     @app.post("/test/message")
     async def test_message(
         content: str = "Hello, I need help with my order #12345",
         from_id: str = "test_user",
-        channel: str = "web"
+        channel: str = "web",
     ):
-        """Test endpoint for development"""
+        """Quick test endpoint for development."""
         response = await chatbot.process_message(from_id, content, ChannelType(channel))
         return {
-            "input": {
-                "from_id": from_id,
-                "content": content,
-                "channel": channel
-            },
+            "input": {"from_id": from_id, "content": content, "channel": channel},
             "response": {
                 "content": response.content,
                 "suggested_actions": response.suggested_actions,
-                "escalate": response.escalate
-            } if response else None
-        }
-    
-    @app.get("/test/admin-token")
-    async def get_test_admin_token():
-        """Get admin token for testing"""
-        token = create_admin_token("test_admin")
-        return {
-            "token": token,
-            "usage": "Use this token in Authorization header as: Bearer {token}"
+                "escalate": response.escalate,
+            } if response else None,
         }
 
-# =======================
-# Application Entry Point
-# =======================
+    @app.get("/test/admin-token")
+    async def get_test_admin_token():
+        """Generate a dev admin token."""
+        token = create_admin_token("test_admin")
+        return {"token": token, "usage": "Authorization: Bearer <token>"}
+
+
+# ===========================================================================
+# Entry point
+# ===========================================================================
 
 if __name__ == "__main__":
     import uvicorn
-    
-    # Validate critical settings
-    if not settings.secret_key or len(settings.secret_key) < 32:
-        logger.error("SECRET_KEY must be at least 32 characters long")
-        exit(1)
-    
+
     logger.info(f"Starting in {'DEBUG' if settings.debug else 'PRODUCTION'} mode")
-    
+
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=int(os.getenv("PORT", 8000)),
+        port=int(os.getenv("PORT", "8000")),
         reload=settings.debug,
-        log_level="info" if not settings.debug else "debug"
+        log_level="debug" if settings.debug else "info",
     )

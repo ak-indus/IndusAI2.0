@@ -1,73 +1,229 @@
-# Welcome to your Lovable project
+# MRO Platform
 
-## Project info
+Agentic back-office / middle-office operating system for industrial MRO (Maintenance, Repair & Operations) distributors.
 
-**URL**: https://lovable.dev/projects/ed15babb-84e6-491d-95c1-67e62cab6b45
+## Tech Stack
 
-## How can I edit this code?
+| Layer | Technology |
+|-------|-----------|
+| **Backend** | Python 3.12, FastAPI, asyncpg, Redis |
+| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, Recharts |
+| **Database** | PostgreSQL 16, Redis 7 |
+| **AI** | Anthropic Claude (circuit-breaker protected) |
+| **Infra** | Docker Compose, GitHub Actions CI |
 
-There are several ways of editing your application.
+## Features
 
-**Use Lovable**
+- **Product Catalog** — SKU management, specs, cross-references, categories, hazmat tracking
+- **Inventory Management** — Multi-warehouse stock levels, reorder alerts, bin locations, transaction history
+- **Order-to-Cash (O2C)** — Full order lifecycle: draft, submit, confirm, ship, deliver, cancel
+- **Quoting** — Create, send, accept, and convert quotes to orders
+- **Dynamic Pricing** — Price lists, quantity tiers, customer contracts
+- **Procurement (P2P)** — Supplier management, purchase orders, goods receipt, auto-generation from reorder alerts
+- **Invoicing & Payments** — Invoice lifecycle, payment recording, AR aging analysis
+- **RMA / Returns** — Return authorization, approval workflow, goods receipt, refund processing
+- **Workflow Engine** — Configurable state machines for orders, POs, RMAs, credit and price approvals
+- **Analytics Dashboard** — KPIs, revenue trends, top products/customers, real-time operational overview
+- **AI Chat Assistant** — Natural language queries for orders, products, and pricing
+- **Omnichannel Messaging** — WhatsApp Business API integration with webhook verification
+- **Monitoring** — Prometheus metrics, health checks, structured logging
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/ed15babb-84e6-491d-95c1-67e62cab6b45) and start prompting.
+## Architecture
 
-Changes made via Lovable will be committed automatically to this repo.
+```
+┌──────────────────────────────────────────────────┐
+│                   React Frontend                  │
+│  ┌─ Back-Office ──────┐  ┌─ Front-Office ──────┐ │
+│  │ Dashboard, Orders, │  │ Omnichannel Hub,    │ │
+│  │ Inventory, Quotes, │  │ AI Chat Assistant   │ │
+│  │ Procurement, RMA   │  │ (WhatsApp, Email,   │ │
+│  │ Invoicing, Products│  │  SMS, Fax, Web)     │ │
+│  └────────────────────┘  └─────────────────────┘ │
+└────────────────────┬─────────────────────────────┘
+                     │  /api/v1/*
+┌────────────────────▼─────────────────────────────┐
+│                FastAPI Backend                     │
+│  ┌─────────┐ ┌──────────┐ ┌────────────────────┐ │
+│  │  Auth   │ │  Rate    │ │  Security Headers  │ │
+│  │  (JWT)  │ │  Limiter │ │  Middleware         │ │
+│  └─────────┘ └──────────┘ └────────────────────┘ │
+│                                                   │
+│  ┌─ Platform Services (15 modules) ─────────────┐ │
+│  │ Product · Inventory · Customer · Pricing     │ │
+│  │ Order · Quote · Procurement · Invoice        │ │
+│  │ RMA · Workflow · Analytics · ERP Connector   │ │
+│  └──────────────────────────────────────────────┘ │
+│                                                   │
+│  ┌─ Core Services ──────────────────────────────┐ │
+│  │ AI (Claude) · Chatbot · Intent Classifier    │ │
+│  │ Business Logic · Spam Detector · Escalation  │ │
+│  │ Omnichannel (WhatsApp · Email · SMS · Fax)   │ │
+│  └──────────────────────────────────────────────┘ │
+└───────┬──────────────────────────┬───────────────┘
+        │                          │
+   ┌────▼────┐               ┌────▼────┐
+   │PostgreSQL│               │  Redis  │
+   │  (data)  │               │ (cache) │
+   └─────────┘               └─────────┘
+```
 
-**Use your preferred IDE**
+## Quick Start
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Prerequisites
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Docker & Docker Compose
+- Node.js 20+ and npm (for frontend development)
+- Python 3.12+ (for backend development without Docker)
 
-Follow these steps:
+### 1. Clone and configure
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+git clone <repo-url> && cd IndusAI2.0
+cp .env.example .env
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Edit `.env` and set at minimum:
 
-# Step 3: Install the necessary dependencies.
-npm i
+```
+SECRET_KEY=your-secret-key-at-least-32-characters-long
+DATABASE_URL=postgresql://chatbot:password@localhost:5432/chatbot
+REDIS_URL=redis://localhost:6379/0
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### 2. Run with Docker Compose (recommended)
+
+```sh
+docker compose up -d
+```
+
+This starts PostgreSQL, Redis, and the backend API on port **8000**.
+
+### 3. Run the frontend
+
+```sh
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Frontend starts on port **8080** and proxies `/api` requests to the backend.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### 4. Open the app
 
-**Use GitHub Codespaces**
+Navigate to `http://localhost:8080`.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Development
 
-## What technologies are used for this project?
+### Backend
 
-This project is built with:
+```sh
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Frontend
 
-## How can I deploy this project?
+```sh
+npm run dev       # Development server with HMR
+npm run build     # Production build (output: dist/)
+npm run lint      # ESLint
+npm test          # Vitest (28 tests)
+npm run test:watch # Vitest watch mode
+```
 
-Simply open [Lovable](https://lovable.dev/projects/ed15babb-84e6-491d-95c1-67e62cab6b45) and click on Share -> Publish.
+### Type checking
 
-## Can I connect a custom domain to my Lovable project?
+```sh
+npx tsc --noEmit -p tsconfig.app.json
+```
 
-Yes, you can!
+## API Overview
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+55+ REST endpoints under `/api/v1`:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+| Module | Endpoints | Methods |
+|--------|-----------|---------|
+| Products | `/products`, `/products/{id}`, `/products/sku/{sku}`, `/products/categories` | GET, POST, PATCH |
+| Inventory | `/inventory`, `/inventory/reorder-alerts`, `/inventory/adjust` | GET, POST |
+| Customers | `/customers`, `/customers/{id}`, `/customers/{id}/credit` | GET, POST |
+| Pricing | `/pricing/{id}`, `/pricing/{id}/tiers`, `/price-lists`, `/contracts` | GET, POST |
+| Orders | `/orders`, `/orders/{id}`, `/orders/{id}/submit\|confirm\|ship\|deliver\|cancel` | GET, POST, PATCH |
+| Quotes | `/quotes`, `/quotes/{id}`, `/quotes/{id}/send\|accept\|convert` | GET, POST |
+| Suppliers | `/suppliers`, `/suppliers/{id}` | GET, POST |
+| Purchase Orders | `/purchase-orders`, `/purchase-orders/auto-generate` | GET, POST |
+| Invoices | `/invoices`, `/invoices/aging`, `/invoices/overdue` | GET, POST |
+| Payments | `/payments` | POST |
+| RMA | `/rma`, `/rma/{id}`, `/rma/{id}/approve\|receive\|refund` | GET, POST |
+| Workflows | `/workflows`, `/workflows/{id}/transition` | GET, POST |
+| Analytics | `/analytics/dashboard`, `/analytics/sales` | GET |
+| Channels | `/channels/stats`, `/channels/messages`, `/channels/escalations` | GET |
+| Chat | `/message` | POST |
+
+Health and monitoring: `GET /health`, `GET /health/detailed`, `GET /metrics`
+
+## Environment Variables
+
+See `.env.example` for the full list. Key variables:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SECRET_KEY` | Yes | JWT signing key (32+ characters) |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `REDIS_URL` | Yes | Redis connection string |
+| `ANTHROPIC_API_KEY` | No | Enables AI chat assistant |
+| `ADMIN_API_KEY` | Prod | Admin API access token |
+| `WHATSAPP_ACCESS_TOKEN` | No | WhatsApp Business API |
+| `RATE_LIMIT_PER_MINUTE` | No | API rate limit (default: 60) |
+
+## CI/CD
+
+GitHub Actions runs on push/PR to `main` and `develop`:
+
+**Frontend job:** lint, type-check, test (28 tests), build
+**Backend job:** ruff lint, mypy type-check
+
+## Project Structure
+
+```
+├── main.py                    # FastAPI app, routes, middleware
+├── services/
+│   ├── ai_service.py          # Claude AI with circuit breaker
+│   ├── business_logic.py      # Core business logic
+│   ├── chatbot_engine.py      # Message processing
+│   ├── database_manager.py    # PostgreSQL + Redis connections
+│   ├── intent_classifier.py   # NLP intent detection
+│   └── platform/
+│       ├── schema.py          # Database schema (25+ tables)
+│       ├── seed.py            # Demo seed data
+│       ├── product_service.py
+│       ├── inventory_service.py
+│       ├── order_service.py
+│       ├── quote_service.py
+│       ├── pricing_service.py
+│       ├── procurement_service.py
+│       ├── invoice_service.py
+│       ├── rma_service.py
+│       ├── customer_service.py
+│       ├── analytics_service.py
+│       └── workflow_engine.py
+├── src/
+│   ├── App.tsx                # Route config (lazy-loaded)
+│   ├── components/
+│   │   ├── ErrorBoundary.tsx
+│   │   └── layout/           # AppLayout, Sidebar, Header
+│   ├── lib/
+│   │   ├── api.ts            # Typed API client (27 methods)
+│   │   └── utils.ts          # formatCurrency, statusColor, cn
+│   ├── pages/                # 12 page components
+│   └── __tests__/            # 3 test suites, 28 tests
+├── docker-compose.yml         # PostgreSQL + Redis + Backend
+├── Dockerfile                 # Multi-stage Python 3.12
+├── .github/workflows/ci.yml  # GitHub Actions pipeline
+├── package.json
+├── requirements.txt
+├── vite.config.ts
+└── tailwind.config.ts
+```
+
+## License
+
+Proprietary. All rights reserved.
