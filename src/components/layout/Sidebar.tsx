@@ -11,6 +11,7 @@ import {
   RotateCcw,
   Bot,
   Radio,
+  ScanSearch,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -36,6 +37,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: "Front-Office",
     items: [
+      { to: "/review-queue", label: "Review Queue", icon: ScanSearch },
       { to: "/channels", label: "Channels", icon: Radio },
       { to: "/chat", label: "AI Assistant", icon: Bot },
     ],

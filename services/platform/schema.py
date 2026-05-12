@@ -394,6 +394,58 @@ CREATE TABLE IF NOT EXISTS workflow_transitions (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Inbound messages from all channels (normalized envelope)
+CREATE TABLE IF NOT EXISTS inbound_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    channel VARCHAR(20) NOT NULL,
+    sender_id VARCHAR(255) NOT NULL,
+    sender_name VARCHAR(255),
+    subject VARCHAR(500),
+    body TEXT NOT NULL,
+    html_body TEXT,
+    has_attachments BOOLEAN DEFAULT FALSE,
+    attachment_count INTEGER DEFAULT 0,
+    resolved_customer_id UUID REFERENCES customers(id),
+    status VARCHAR(20) DEFAULT 'received',
+    metadata JSONB DEFAULT '{}',
+    received_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Parsed documents (output of AI parsing engine)
+CREATE TABLE IF NOT EXISTS parsed_documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    inbound_message_id UUID NOT NULL REFERENCES inbound_messages(id) ON DELETE CASCADE,
+    document_type VARCHAR(30),
+    parsed_data JSONB NOT NULL DEFAULT '{}',
+    overall_confidence FLOAT DEFAULT 0,
+    needs_review BOOLEAN DEFAULT TRUE,
+    review_reasons TEXT[],
+    status VARCHAR(20) DEFAULT 'pending_review',
+    assigned_to VARCHAR(100),
+    reviewed_by VARCHAR(100),
+    reviewed_at TIMESTAMPTZ,
+    review_edits JSONB,
+    result_order_id UUID REFERENCES orders(id),
+    result_quote_id UUID REFERENCES quotes(id),
+    raw_text TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Attachment storage metadata
+CREATE TABLE IF NOT EXISTS attachments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    inbound_message_id UUID NOT NULL REFERENCES inbound_messages(id) ON DELETE CASCADE,
+    filename VARCHAR(255) NOT NULL,
+    content_type VARCHAR(100),
+    size_bytes INTEGER,
+    storage_path VARCHAR(500),
+    extracted_text TEXT,
+    extraction_method VARCHAR(20),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 """
 
 PLATFORM_INDEXES = """
@@ -463,4 +515,20 @@ CREATE INDEX IF NOT EXISTS idx_workflows_type ON workflows(workflow_type);
 CREATE INDEX IF NOT EXISTS idx_workflows_ref ON workflows(reference_type, reference_id);
 CREATE INDEX IF NOT EXISTS idx_workflows_state ON workflows(current_state);
 CREATE INDEX IF NOT EXISTS idx_wf_transitions_wf ON workflow_transitions(workflow_id);
+
+-- Inbound Messages
+CREATE INDEX IF NOT EXISTS idx_inbound_messages_channel ON inbound_messages(channel);
+CREATE INDEX IF NOT EXISTS idx_inbound_messages_sender ON inbound_messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_inbound_messages_status ON inbound_messages(status);
+CREATE INDEX IF NOT EXISTS idx_inbound_messages_customer ON inbound_messages(resolved_customer_id);
+CREATE INDEX IF NOT EXISTS idx_inbound_messages_received ON inbound_messages(received_at DESC);
+
+-- Parsed Documents
+CREATE INDEX IF NOT EXISTS idx_parsed_documents_message ON parsed_documents(inbound_message_id);
+CREATE INDEX IF NOT EXISTS idx_parsed_documents_status ON parsed_documents(status);
+CREATE INDEX IF NOT EXISTS idx_parsed_documents_assigned ON parsed_documents(assigned_to) WHERE status IN ('pending_review', 'in_review');
+CREATE INDEX IF NOT EXISTS idx_parsed_documents_confidence ON parsed_documents(overall_confidence);
+
+-- Attachments
+CREATE INDEX IF NOT EXISTS idx_attachments_message ON attachments(inbound_message_id);
 """

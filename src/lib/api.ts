@@ -234,6 +234,70 @@ export interface EscalationTicket {
   updated_at: string;
 }
 
+export interface ParsedLineItem {
+  description: string;
+  part_number: string | null;
+  manufacturer: string | null;
+  quantity: number;
+  unit: string;
+  requested_price: number | null;
+  resolved_product_id: string | null;
+  resolved_sku: string | null;
+  resolved_unit_price: number | null;
+  match_confidence: number;
+  in_stock: boolean | null;
+}
+
+export interface ReviewQueueItem {
+  id: string;
+  inbound_message_id: string;
+  document_type: string;
+  channel: string;
+  sender_id: string;
+  sender_name: string | null;
+  subject: string | null;
+  customer_name: string | null;
+  overall_confidence: number;
+  needs_review: boolean;
+  review_reasons: string[];
+  status: string;
+  assigned_to: string | null;
+  line_item_count: number;
+  result_order_id: string | null;
+  created_at: string;
+}
+
+export interface ReviewQueueDetail extends ReviewQueueItem {
+  parsed_data: {
+    document_type: string;
+    po_number: string | null;
+    customer_name: string | null;
+    customer_email: string | null;
+    customer_phone: string | null;
+    required_date: string | null;
+    shipping_address: string | null;
+    billing_address: string | null;
+    line_items: ParsedLineItem[];
+    special_instructions: string | null;
+    payment_terms: string | null;
+    _customer_resolved_id: string | null;
+    _customer_resolved: boolean;
+    _customer_confidence: number;
+  };
+  raw_text: string;
+  original_body: string;
+  html_body: string | null;
+  received_at: string;
+  attachments: Array<{
+    id: string;
+    filename: string;
+    content_type: string;
+    size_bytes: number;
+  }>;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+}
+
 // ---------- API Functions ----------
 
 export const api = {
@@ -299,4 +363,17 @@ export const api = {
     get<PaginatedResponse<ChannelMessage>>(`/channels/messages?page=${page}&page_size=20${channel ? `&channel=${channel}` : ""}`),
   getEscalations: (page = 1, status = "") =>
     get<PaginatedResponse<EscalationTicket>>(`/channels/escalations?page=${page}&page_size=20${status ? `&status=${status}` : ""}`),
+
+  // Review Queue
+  getReviewQueue: (page = 1, status = "") =>
+    get<PaginatedResponse<ReviewQueueItem>>(`/review-queue?page=${page}&page_size=20${status ? `&status=${status}` : ""}`),
+  getReviewItem: (id: string) => get<ReviewQueueDetail>(`/review-queue/${id}`),
+  approveReview: (id: string, reviewedBy: string, edits?: Record<string, unknown>) =>
+    post<unknown>(`/review-queue/${id}/approve`, { reviewed_by: reviewedBy, edits }),
+  rejectReview: (id: string, reviewedBy: string, reason: string) =>
+    post<unknown>(`/review-queue/${id}/reject`, { reviewed_by: reviewedBy, reason }),
+  assignReview: (id: string, assignedTo: string) =>
+    post<unknown>(`/review-queue/${id}/assign`, { assigned_to: assignedTo }),
+  testParse: (text: string) =>
+    post<unknown>("/parse/test", { text }),
 };

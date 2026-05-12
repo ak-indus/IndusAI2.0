@@ -19,9 +19,9 @@ FROM python:3.12-slim AS production
 
 WORKDIR /app
 
-# Runtime deps only
+# Runtime deps only (includes tesseract for OCR)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 wget && \
+    libpq5 wget tesseract-ocr && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy installed packages from base
@@ -36,8 +36,11 @@ COPY routes/ routes/
 COPY metrics/ metrics/
 COPY templates/ templates/
 
+# Create attachment storage directory
+RUN mkdir -p /data/attachments
+
 # Non-root user for security
-RUN useradd -m appuser
+RUN useradd -m appuser && chown -R appuser:appuser /data
 USER appuser
 
 EXPOSE 8000

@@ -15,6 +15,8 @@ const Invoices = lazy(() => import("@/pages/Invoices"));
 const RMA = lazy(() => import("@/pages/RMA"));
 const Channels = lazy(() => import("@/pages/Channels"));
 const Chat = lazy(() => import("@/pages/Chat"));
+const ReviewQueue = lazy(() => import("@/pages/ReviewQueue"));
+const ReviewDetail = lazy(() => import("@/pages/ReviewDetail"));
 
 function PageLoader() {
   return (
@@ -39,6 +41,8 @@ export default function App() {
           <Route path="/procurement" element={<Suspense fallback={<PageLoader />}><Procurement /></Suspense>} />
           <Route path="/invoices" element={<Suspense fallback={<PageLoader />}><Invoices /></Suspense>} />
           <Route path="/rma" element={<Suspense fallback={<PageLoader />}><RMA /></Suspense>} />
+          <Route path="/review-queue" element={<Suspense fallback={<PageLoader />}><ReviewQueue /></Suspense>} />
+          <Route path="/review-queue/:id" element={<Suspense fallback={<PageLoader />}><ReviewDetail /></Suspense>} />
           <Route path="/channels" element={<Suspense fallback={<PageLoader />}><Channels /></Suspense>} />
           <Route path="/chat" element={<Suspense fallback={<PageLoader />}><Chat /></Suspense>} />
         </Route>

@@ -65,8 +65,15 @@ services:
       # Support
       SUPPORT_EMAIL: ${SUPPORT_EMAIL:-support@company.com}
       SUPPORT_PHONE: ${SUPPORT_PHONE:-1-800-TECH-HELP}
+      # SendGrid
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      SENDGRID_INBOUND_WEBHOOK_SECRET: ${SENDGRID_INBOUND_WEBHOOK_SECRET:-}
+      # Attachment storage
+      ATTACHMENT_STORAGE_PATH: /data/attachments
       # Rate limiting
       RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-60}
+    volumes:
+      - attachment_data:/data/attachments
     ports:
       - "8000:8000"
     depends_on:
@@ -87,6 +94,8 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  attachment_data:
     driver: local
 
 networks:

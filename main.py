@@ -159,6 +159,13 @@ class Settings(BaseSettings):
     smtp_username: Optional[str] = Field(default=None)
     smtp_password: Optional[str] = Field(default=None)
 
+    # SendGrid
+    sendgrid_api_key: Optional[str] = Field(default=None)
+    sendgrid_inbound_webhook_secret: Optional[str] = Field(default=None)
+
+    # Attachment storage
+    attachment_storage_path: str = Field(default="/data/attachments")
+
     # Rate limiting
     rate_limit_per_minute: int = Field(default=60)
 
@@ -253,6 +260,12 @@ invoice_service = InvoiceService(db_manager, customer_service, logger)
 rma_service = RMAService(db_manager, inventory_service, workflow_engine, logger)
 analytics_service = AnalyticsService(db_manager, logger)
 
+from services.parsing.parsing_service import ParsingService
+parsing_service = ParsingService(
+    db_manager, ai_service, product_service,
+    customer_service, pricing_service, logger,
+)
+
 business_logic = BusinessLogic(
     ai_service=ai_service,
     db_manager=db_manager,
@@ -288,6 +301,9 @@ async def lifespan(app: FastAPI):
 
     await db_manager.initialize()
 
+    # Ensure attachment storage directory exists
+    os.makedirs(settings.attachment_storage_path, exist_ok=True)
+
     # Create platform tables & indexes
     if db_manager.pool:
         try:
@@ -312,6 +328,7 @@ async def lifespan(app: FastAPI):
         "rma_service": rma_service,
         "workflow_engine": workflow_engine,
         "analytics_service": analytics_service,
+        "parsing_service": parsing_service,
     })
 
     # Seed demo data in debug mode
@@ -752,12 +769,105 @@ async def _process_whatsapp_message(from_number: str, text: str):
                     description=text,
                     priority="high",
                 )
+
+        # Also ingest into parsing engine for potential order creation
+        classified = classifier.classify(text)
+        if classified[0] in (MessageType.ORDER_STATUS, MessageType.PRICE_REQUEST, MessageType.PRODUCT_INQUIRY):
+            try:
+                await parsing_service.ingest_message(
+                    channel="whatsapp", sender_id=from_number,
+                    body=text,
+                )
+            except Exception as pe:
+                logger.error(f"Parsing ingestion failed for WhatsApp: {pe}")
+
     except Exception as e:
         logger.error(f"WhatsApp processing error: {e}", exc_info=True)
         await comm_manager.send_whatsapp_message(
             from_number,
             "I apologize, but I encountered an error. Please try again or contact our support team.",
         )
+
+
+# ===========================================================================
+# Email Webhook (SendGrid Inbound Parse)
+# ===========================================================================
+
+
+@app.post("/webhook/email")
+@limiter.limit("60/minute")
+async def handle_email_webhook(
+    request: Request,
+    background_tasks: BackgroundTasks,
+):
+    """Receive inbound emails via SendGrid Inbound Parse."""
+    try:
+        form = await request.form()
+
+        sender_raw = form.get("from", "")
+        subject = form.get("subject", "")
+        text_body = form.get("text", "")
+        html_body = form.get("html", "")
+
+        # Parse sender: "Name <email>" or just "email"
+        import re as _re
+        match = _re.match(r'^(.+?)\s*<(.+?)>\s*$', str(sender_raw))
+        if match:
+            sender_name = match.group(1).strip().strip('"')
+            sender_email = match.group(2).strip()
+        else:
+            sender_name = None
+            sender_email = str(sender_raw).strip()
+
+        # Collect attachments
+        attachments_data = []
+        attachment_info = form.get("attachment-info")
+        if attachment_info:
+            try:
+                att_meta = json.loads(str(attachment_info))
+            except json.JSONDecodeError:
+                att_meta = {}
+            for key, meta in att_meta.items():
+                upload = form.get(key)
+                if upload and hasattr(upload, "read"):
+                    content = await upload.read()
+                    attachments_data.append({
+                        "filename": meta.get("filename", key),
+                        "content_type": meta.get("type", "application/octet-stream"),
+                        "content": content,
+                    })
+
+        background_tasks.add_task(
+            _process_email,
+            sender_email, sender_name, str(subject),
+            str(text_body), str(html_body), attachments_data,
+        )
+        return {"status": "received"}
+
+    except Exception as e:
+        logger.error(f"Email webhook error: {e}", exc_info=True)
+        ERROR_COUNTER.labels(error_type="email_webhook_error").inc()
+        return {"status": "error"}
+
+
+async def _process_email(
+    sender_email: str, sender_name: Optional[str], subject: str,
+    text_body: str, html_body: str, attachments_data: list,
+):
+    """Background task: ingest an inbound email into the parsing engine."""
+    try:
+        await parsing_service.ingest_message(
+            channel="email",
+            sender_id=sender_email,
+            sender_name=sender_name,
+            subject=subject,
+            body=text_body,
+            html_body=html_body or None,
+            attachments_data=attachments_data,
+        )
+        logger.info(f"Email from {sender_email} ingested for parsing")
+    except Exception as e:
+        logger.error(f"Email processing error: {e}", exc_info=True)
 
 
 # ===========================================================================

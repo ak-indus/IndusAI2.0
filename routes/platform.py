@@ -29,6 +29,7 @@ from models.domain import (
     PaymentCreate, PurchaseOrderCreate, ProductCreate, ProductUpdate,
     QuoteCreate, RMACreate, SupplierCreate, WorkflowAction,
     PriceListCreate, PriceListItemCreate,
+    ManualParseRequest, ReviewApproval, ReviewRejection, ReviewAssignment,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["platform"])
@@ -695,3 +696,71 @@ async def get_dashboard_metrics():
 @router.get("/analytics/sales")
 async def get_sales_summary(period: str = Query("month", pattern="^(day|week|month)$")):
     return await _svc("analytics").get_sales_summary(period)
+
+
+# ===================================================================
+# Review Queue / Parsing
+# ===================================================================
+
+@router.post("/parse/test", status_code=201)
+async def test_parse(data: ManualParseRequest):
+    result = await _svc("parsing_service").ingest_message(
+        channel=data.channel,
+        sender_id=data.sender_id,
+        body=data.text,
+    )
+    if not result or result.get("error"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Parsing failed"))
+    return result
+
+
+@router.get("/review-queue")
+async def list_review_queue(
+    status: Optional[str] = None,
+    assigned_to: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
+):
+    items, total = await _svc("parsing_service").list_review_queue(
+        status=status, assigned_to=assigned_to,
+        page=page, page_size=page_size,
+    )
+    return _paginated(items, total, page, page_size)
+
+
+@router.get("/review-queue/{doc_id}")
+async def get_review_item(doc_id: str):
+    result = await _svc("parsing_service").get_parsed_document(doc_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return result
+
+
+@router.post("/review-queue/{doc_id}/approve")
+async def approve_review(doc_id: str, data: ReviewApproval):
+    result = await _svc("parsing_service").approve_document(
+        doc_id, data.reviewed_by, data.edits,
+    )
+    if not result or result.get("error"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Approval failed"))
+    return result
+
+
+@router.post("/review-queue/{doc_id}/reject")
+async def reject_review(doc_id: str, data: ReviewRejection):
+    result = await _svc("parsing_service").reject_document(
+        doc_id, data.reviewed_by, data.reason,
+    )
+    if not result or result.get("error"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Rejection failed"))
+    return result
+
+
+@router.post("/review-queue/{doc_id}/assign")
+async def assign_review(doc_id: str, data: ReviewAssignment):
+    result = await _svc("parsing_service").assign_document(
+        doc_id, data.assigned_to,
+    )
+    if not result or result.get("error"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Assignment failed"))
+    return result

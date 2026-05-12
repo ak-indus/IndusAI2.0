@@ -637,3 +637,64 @@ class PaginatedResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+
+# ---------------------------------------------------------------------------
+# Parsing & Review Queue
+# ---------------------------------------------------------------------------
+
+class InboundMessageCreate(BaseModel):
+    channel: str = Field(..., max_length=20)
+    sender_id: str = Field(..., max_length=255)
+    sender_name: Optional[str] = Field(None, max_length=255)
+    subject: Optional[str] = Field(None, max_length=500)
+    body: str
+    html_body: Optional[str] = None
+
+
+class ParsedLineItem(BaseModel):
+    description: str
+    part_number: Optional[str] = None
+    manufacturer: Optional[str] = None
+    quantity: float = 1
+    unit: str = "EA"
+    requested_price: Optional[float] = None
+    resolved_product_id: Optional[str] = None
+    resolved_sku: Optional[str] = None
+    resolved_unit_price: Optional[float] = None
+    match_confidence: float = 0.0
+    in_stock: Optional[bool] = None
+
+
+class ParsedDocumentData(BaseModel):
+    document_type: str = "general"
+    po_number: Optional[str] = None
+    customer_name: Optional[str] = None
+    customer_email: Optional[str] = None
+    customer_phone: Optional[str] = None
+    required_date: Optional[str] = None
+    shipping_address: Optional[str] = None
+    billing_address: Optional[str] = None
+    line_items: List[ParsedLineItem] = []
+    special_instructions: Optional[str] = None
+    payment_terms: Optional[str] = None
+
+
+class ReviewApproval(BaseModel):
+    reviewed_by: str = Field(..., max_length=100)
+    edits: Optional[Dict[str, Any]] = None
+
+
+class ReviewRejection(BaseModel):
+    reviewed_by: str = Field(..., max_length=100)
+    reason: str = Field(..., min_length=1)
+
+
+class ReviewAssignment(BaseModel):
+    assigned_to: str = Field(..., max_length=100)
+
+
+class ManualParseRequest(BaseModel):
+    text: str = Field(..., min_length=1)
+    channel: str = Field(default="manual", max_length=20)
+    sender_id: str = Field(default="manual_upload", max_length=255)
