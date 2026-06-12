@@ -40,9 +40,11 @@ Prospect runs ROI calculator  ──►  pilot_leads (with their own numbers)
 3. **Weekly**: review `GET /api/v1/leads?status=new`, advance or close each
    lead (`PATCH /api/v1/leads/{id}/status`). The funnel summary is the
    source of truth for the pipeline slide in investor updates.
-4. **ROI model assumptions** (`src/lib/roi.ts`: 70% automation rate, 80%
-   error prevention) are deliberately conservative defaults — replace them
-   with measured pilot data as soon as the first pilot reports.
+4. **ROI model assumptions** (`src/lib/roi.ts`) are benchmarked against
+   published industry data — per-order timing from Esker customer telemetry,
+   wages from BLS, error rates from vendor benchmarks; full audit in
+   `docs/MARKET_VALIDATION_RESEARCH.md` §2. Replace them with measured pilot
+   data as soon as the first pilot reports.
 
 ## Why this exists
 

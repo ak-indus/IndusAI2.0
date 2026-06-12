@@ -3,7 +3,13 @@ import { Calculator, Clock, DollarSign, Send, Users } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { formatCurrency, formatNumber } from "@/lib/utils";
-import { AUTOMATION_RATE, ERROR_REDUCTION_RATE, calculateRoi } from "@/lib/roi";
+import {
+  AUTOMATION_RATE,
+  DEFAULT_INPUTS,
+  ERROR_REDUCTION_RATE,
+  calculateRoi,
+  monthlyOrderLines,
+} from "@/lib/roi";
 
 interface NumberFieldProps {
   label: string;
@@ -53,21 +59,23 @@ function Stat({ icon: Icon, label, value, accent }: StatProps) {
 }
 
 export default function ROICalculator() {
-  const [monthlyOrderLines, setMonthlyOrderLines] = useState(3000);
-  const [minutesPerLine, setMinutesPerLine] = useState(4);
-  const [hourlyCost, setHourlyCost] = useState(38);
-  const [errorRatePercent, setErrorRatePercent] = useState(3);
-  const [costPerError, setCostPerError] = useState(45);
+  const [monthlyOrders, setMonthlyOrders] = useState(DEFAULT_INPUTS.monthlyOrders);
+  const [avgLinesPerOrder, setAvgLinesPerOrder] = useState(DEFAULT_INPUTS.avgLinesPerOrder);
+  const [minutesPerOrder, setMinutesPerOrder] = useState(DEFAULT_INPUTS.minutesPerOrder);
+  const [hourlyCost, setHourlyCost] = useState(DEFAULT_INPUTS.hourlyCost);
+  const [errorRatePercent, setErrorRatePercent] = useState(DEFAULT_INPUTS.errorRatePercent);
+  const [costPerError, setCostPerError] = useState(DEFAULT_INPUTS.costPerError);
 
   const [company, setCompany] = useState("");
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [requested, setRequested] = useState(false);
 
-  const roi = useMemo(
-    () => calculateRoi({ monthlyOrderLines, minutesPerLine, hourlyCost, errorRatePercent, costPerError }),
-    [monthlyOrderLines, minutesPerLine, hourlyCost, errorRatePercent, costPerError]
+  const inputs = useMemo(
+    () => ({ monthlyOrders, avgLinesPerOrder, minutesPerOrder, hourlyCost, errorRatePercent, costPerError }),
+    [monthlyOrders, avgLinesPerOrder, minutesPerOrder, hourlyCost, errorRatePercent, costPerError]
   );
+  const roi = useMemo(() => calculateRoi(inputs), [inputs]);
 
   const requestPilot = async () => {
     if (!company.trim() || !email.trim()) {
@@ -79,7 +87,7 @@ export default function ROICalculator() {
       await api.submitLead({
         company: company.trim(),
         email: email.trim(),
-        monthly_order_lines: monthlyOrderLines,
+        monthly_order_lines: monthlyOrderLines(inputs),
         estimated_annual_savings: roi.annualTotalSavings,
         source: "roi_calculator",
       });
@@ -100,8 +108,9 @@ export default function ROICalculator() {
           ROI Calculator
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Estimate what agentic order intake saves your operation. Assumes {AUTOMATION_RATE * 100}% of manual line
-          handling is automated and {ERROR_REDUCTION_RATE * 100}% of keying errors are prevented.
+          Estimate what agentic order intake saves your operation. Assumes {AUTOMATION_RATE * 100}% of
+          manual order handling is automated at steady state and {ERROR_REDUCTION_RATE * 100}% of entry
+          errors are prevented — benchmarked against published industry data, not best cases.
         </p>
       </div>
 
@@ -110,36 +119,43 @@ export default function ROICalculator() {
         <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Your operation today</h2>
           <NumberField
-            label="Order lines per month"
-            hint="Across phone, email, fax, and WhatsApp"
-            value={monthlyOrderLines}
-            onChange={setMonthlyOrderLines}
-            step={100}
+            label="Manually handled orders per month"
+            hint="Orders arriving by email, PDF, phone, WhatsApp, or fax — not EDI or web cart"
+            value={monthlyOrders}
+            onChange={setMonthlyOrders}
+            step={50}
           />
           <NumberField
-            label="Minutes per order line"
-            hint="Average manual handling: intake, lookup, keying, confirmation"
-            value={minutesPerLine}
-            onChange={setMinutesPerLine}
-            step={0.5}
+            label="Average line items per order"
+            hint="Typical industrial POs run 3–8 lines"
+            value={avgLinesPerOrder}
+            onChange={setAvgLinesPerOrder}
+            step={1}
+          />
+          <NumberField
+            label="Minutes per order (manual entry)"
+            hint="Industry telemetry median: 11 min manual vs 3 min automated (Esker, 2025)"
+            value={minutesPerOrder}
+            onChange={setMinutesPerOrder}
+            step={1}
           />
           <NumberField
             label="Fully-loaded hourly cost ($)"
-            hint="CSR / inside-sales wage plus benefits and overhead"
+            hint="CSR median ≈ $29/hr loaded (BLS 2024); use ~$42 if inside-sales reps key orders"
             value={hourlyCost}
             onChange={setHourlyCost}
           />
           <NumberField
-            label="Order entry error rate (%)"
-            hint="Lines with wrong part, quantity, or price"
+            label="Orders with entry errors (%)"
+            hint="Benchmark: ~9% of manually keyed orders contain an error"
             value={errorRatePercent}
             onChange={setErrorRatePercent}
             max={100}
             step={0.5}
           />
           <NumberField
-            label="Cost per error ($)"
-            hint="Returns, freight, credit memos, and time to fix"
+            label="Cost per order error ($)"
+            hint="Returns, freight, credit memos, time to fix — trade estimates run $25–$75"
             value={costPerError}
             onChange={setCostPerError}
           />
@@ -154,6 +170,13 @@ export default function ROICalculator() {
             <Stat icon={DollarSign} label="Error savings / year" value={formatCurrency(roi.annualErrorSavings)} />
           </div>
           <Stat icon={DollarSign} label="Total estimated savings / year" value={formatCurrency(roi.annualTotalSavings)} accent />
+
+          <p className="text-xs leading-relaxed text-slate-400">
+            Assumptions: {minutesPerOrder} min/order manual handling; {AUTOMATION_RATE * 100}% steady-state
+            automation (Esker customer average is 67% touchless, top performers 90%+);
+            {" "}{ERROR_REDUCTION_RATE * 100}% error prevention (manual error rates of 3–9% fall below 1%
+            when automated). Sources and methodology: docs/MARKET_VALIDATION_RESEARCH.md.
+          </p>
 
           {/* Pilot CTA */}
           <div className="rounded-xl border border-slate-200 bg-white p-5">
