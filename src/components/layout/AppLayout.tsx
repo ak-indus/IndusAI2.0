@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import FeedbackWidget from "@/components/FeedbackWidget";
 
 export default function AppLayout() {
   return (
@@ -15,6 +16,7 @@ export default function AppLayout() {
           </ErrorBoundary>
         </main>
       </div>
+      <FeedbackWidget />
     </div>
   );
 }

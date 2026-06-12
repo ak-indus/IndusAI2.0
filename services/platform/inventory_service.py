@@ -271,13 +271,8 @@ class InventoryService:
         try:
             async with self.db.pool.acquire() as conn:
                 async with conn.transaction():
-                    update_bin = ", bin_location = $4" if bin_location else ""
-                    params: list = [qty, product_id, warehouse_code]
-                    if bin_location:
-                        params.append(bin_location)
-
                     await conn.execute(
-                        f"""
+                        """
                         INSERT INTO inventory (id, product_id, warehouse_code, quantity_on_hand, bin_location)
                         VALUES ($1, $2, $3, $4, $5)
                         ON CONFLICT (product_id, warehouse_code) DO UPDATE

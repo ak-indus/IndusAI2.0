@@ -49,6 +49,9 @@ class QuoteService:
         try:
             async with self.db.pool.acquire() as conn:
                 async with conn.transaction():
+                    # Price all lines first; the quote header must be inserted
+                    # before quote_lines to satisfy the FK constraint.
+                    lines_data = []
                     subtotal = 0.0
 
                     for idx, line in enumerate(data.get("lines", []), start=1):
@@ -73,19 +76,12 @@ class QuoteService:
                         line_total = round(qty * unit_price * (1 - discount_pct / 100), 2)
                         subtotal += line_total
 
-                        await conn.execute(
-                            """
-                            INSERT INTO quote_lines
-                                (id, quote_id, line_number, product_id, sku,
-                                 description, quantity, unit_price, discount_percent,
-                                 line_total, lead_time_days)
-                            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-                            """,
+                        lines_data.append((
                             str(uuid.uuid4()), quote_id, idx,
                             line["product_id"], product["sku"], product["name"],
                             qty, unit_price, discount_pct, line_total,
                             product["lead_time_days"],
-                        )
+                        ))
 
                     total_amount = subtotal  # Tax handled at order time
 
@@ -100,6 +96,18 @@ class QuoteService:
                         valid_until, subtotal, total_amount,
                         data.get("notes"), created_by,
                     )
+
+                    for ld in lines_data:
+                        await conn.execute(
+                            """
+                            INSERT INTO quote_lines
+                                (id, quote_id, line_number, product_id, sku,
+                                 description, quantity, unit_price, discount_percent,
+                                 line_total, lead_time_days)
+                            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+                            """,
+                            *ld,
+                        )
 
             self.logger.info(f"Quote created: {quote_number} (${total_amount:,.2f})")
             return await self.get_quote(quote_id)

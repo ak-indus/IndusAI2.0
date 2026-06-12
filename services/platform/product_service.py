@@ -130,7 +130,7 @@ class ProductService:
         if not fields:
             return await self.get_product(product_id)
 
-        fields.append(f"updated_at = NOW()")
+        fields.append("updated_at = NOW()")
         values.append(product_id)
         query = f"UPDATE products SET {', '.join(fields)} WHERE id = ${idx}"
 

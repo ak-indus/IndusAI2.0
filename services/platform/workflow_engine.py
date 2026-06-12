@@ -306,6 +306,9 @@ class WorkflowEngine:
                 results = []
                 for row in rows:
                     d = dict(row)
+                    d["id"] = str(d["id"])
+                    if d.get("reference_id"):
+                        d["reference_id"] = str(d["reference_id"])
                     if d.get("started_at"):
                         d["started_at"] = d["started_at"].isoformat()
                     results.append(d)

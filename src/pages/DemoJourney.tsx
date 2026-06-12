@@ -9,15 +9,11 @@ import {
   Phone,
   Bot,
   User,
-  Package,
-  FileText,
   Truck,
   CheckCircle2,
   Clock,
   ArrowRight,
   Zap,
-  ShoppingCart,
-  RotateCcw,
   Star,
   Building2,
   ChevronDown,
@@ -27,7 +23,6 @@ import {
   DollarSign,
   Activity,
   Search,
-  AlertTriangle,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -475,7 +470,7 @@ export default function DemoJourney() {
         </div>
 
         <div className="divide-y divide-slate-100">
-          {filteredJourney.map((tp, idx) => {
+          {filteredJourney.map((tp) => {
             const chCfg = CHANNEL_CONFIG[tp.channel];
             const pCfg = PERSONA_CONFIG[tp.persona];
             const isExpanded = expandedTouchpoint === tp.id;

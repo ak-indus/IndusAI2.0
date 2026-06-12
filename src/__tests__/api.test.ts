@@ -79,7 +79,9 @@ describe("api client", () => {
   });
 
   describe("submitOrder", () => {
-    it("sends PATCH to /orders/:id/submit", async () => {
+    // The backend defines lifecycle actions as POST endpoints; the client
+    // briefly used PATCH and every order action 405'd. Keep this pinned.
+    it("sends POST to /orders/:id/submit", async () => {
       const order = { id: "1", order_number: "ORD-001", status: "submitted" };
       mockFetch.mockReturnValueOnce(jsonResponse(order));
 
@@ -87,7 +89,7 @@ describe("api client", () => {
 
       expect(mockFetch).toHaveBeenCalledWith(
         "/api/v1/orders/1/submit",
-        expect.objectContaining({ method: "PATCH" })
+        expect.objectContaining({ method: "POST" })
       );
       expect(result).toEqual(order);
     });

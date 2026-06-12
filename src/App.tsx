@@ -22,6 +22,7 @@ const DemoSales = lazy(() => import("@/pages/DemoSales"));
 const DemoFinance = lazy(() => import("@/pages/DemoFinance"));
 const DemoOps = lazy(() => import("@/pages/DemoOps"));
 const DemoJourney = lazy(() => import("@/pages/DemoJourney"));
+const ROICalculator = lazy(() => import("@/pages/ROICalculator"));
 
 function PageLoader() {
   return (
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="/demo/finance" element={<Suspense fallback={<PageLoader />}><DemoFinance /></Suspense>} />
           <Route path="/demo/ops" element={<Suspense fallback={<PageLoader />}><DemoOps /></Suspense>} />
           <Route path="/demo/journey" element={<Suspense fallback={<PageLoader />}><DemoJourney /></Suspense>} />
+          <Route path="/roi" element={<Suspense fallback={<PageLoader />}><ROICalculator /></Suspense>} />
         </Route>
       </Routes>
       <Toaster position="top-right" richColors />

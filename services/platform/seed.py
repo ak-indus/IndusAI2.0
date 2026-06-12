@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, timedelta
-from typing import Any
 
 
 async def seed_database(db_manager, product_service, pricing_service,

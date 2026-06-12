@@ -18,13 +18,12 @@ Enums, Pydantic request/response models, and dataclasses for:
 
 from __future__ import annotations
 
-import uuid
-from datetime import date, datetime, timezone
+from datetime import date
 from decimal import Decimal
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 # ---------------------------------------------------------------------------
@@ -614,6 +613,35 @@ class DashboardMetrics(BaseModel):
     top_products: List[Dict[str, Any]] = []
     top_customers: List[Dict[str, Any]] = []
     recent_orders: List[Dict[str, Any]] = []
+
+
+# ---------------------------------------------------------------------------
+# Validation Loop — Feedback & Pilot Leads
+# ---------------------------------------------------------------------------
+
+class FeedbackCreate(BaseModel):
+    score: int = Field(..., ge=1, le=5)
+    comment: Optional[str] = Field(None, max_length=2000)
+    page: Optional[str] = Field(None, max_length=100)
+    persona: Optional[str] = Field(None, max_length=50)
+    contact_email: Optional[str] = Field(None, max_length=255)
+    source: str = Field(default="in_app", max_length=30)
+
+
+class LeadCreate(BaseModel):
+    company: str = Field(..., min_length=1, max_length=255)
+    contact_name: Optional[str] = Field(None, max_length=255)
+    email: str = Field(..., min_length=3, max_length=255)
+    phone: Optional[str] = Field(None, max_length=50)
+    role: Optional[str] = Field(None, max_length=100)
+    monthly_order_lines: Optional[int] = Field(None, ge=0)
+    pain_points: Optional[str] = Field(None, max_length=2000)
+    estimated_annual_savings: Optional[Decimal] = Field(None, ge=0)
+    source: str = Field(default="roi_calculator", max_length=50)
+
+
+class LeadStatusUpdate(BaseModel):
+    status: str = Field(..., pattern=r'^(new|contacted|qualified|pilot|customer|lost)$')
 
 
 # ---------------------------------------------------------------------------

@@ -21,12 +21,12 @@ from __future__ import annotations
 import math
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from models.domain import (
-    CustomerContractCreate, CustomerCreate, GoodsReceiptCreate,
-    InvoiceCreate, InventoryAdjustment, OrderCreate, OrderStatusUpdate,
-    PaymentCreate, PurchaseOrderCreate, ProductCreate, ProductUpdate,
+    CustomerContractCreate, CustomerCreate, FeedbackCreate, GoodsReceiptCreate,
+    InvoiceCreate, InventoryAdjustment, LeadCreate, LeadStatusUpdate,
+    OrderCreate, PaymentCreate, PurchaseOrderCreate, ProductCreate, ProductUpdate,
     QuoteCreate, RMACreate, SupplierCreate, WorkflowAction,
     PriceListCreate, PriceListItemCreate,
 )
@@ -136,12 +136,11 @@ async def list_inventory(
     return _paginated(items, total, page, page_size)
 
 
-@router.get("/inventory/{product_id}")
-async def get_stock(product_id: str, warehouse: str = "MAIN"):
-    result = await _svc("inventory").get_stock(product_id, warehouse)
-    if not result:
-        raise HTTPException(status_code=404, detail="Inventory record not found")
-    return result
+# NOTE: fixed paths must be registered before /inventory/{product_id},
+# otherwise the catch-all path parameter shadows them.
+@router.get("/inventory/reorder-alerts")
+async def get_reorder_alerts(warehouse: str = "MAIN"):
+    return await _svc("inventory").get_reorder_alerts(warehouse)
 
 
 @router.get("/inventory/sku/{sku}")
@@ -163,9 +162,12 @@ async def adjust_inventory(data: InventoryAdjustment):
     return {"status": "adjusted"}
 
 
-@router.get("/inventory/reorder-alerts")
-async def get_reorder_alerts(warehouse: str = "MAIN"):
-    return await _svc("inventory").get_reorder_alerts(warehouse)
+@router.get("/inventory/{product_id}")
+async def get_stock(product_id: str, warehouse: str = "MAIN"):
+    result = await _svc("inventory").get_stock(product_id, warehouse)
+    if not result:
+        raise HTTPException(status_code=404, detail="Inventory record not found")
+    return result
 
 
 @router.get("/inventory/{product_id}/transactions")
@@ -695,3 +697,62 @@ async def get_dashboard_metrics():
 @router.get("/analytics/sales")
 async def get_sales_summary(period: str = Query("month", pattern="^(day|week|month)$")):
     return await _svc("analytics").get_sales_summary(period)
+
+
+# ===================================================================
+# Validation Loop — Feedback & Pilot Leads
+# ===================================================================
+
+@router.post("/feedback", status_code=201)
+async def submit_feedback(data: FeedbackCreate):
+    result = await _svc("validation").submit_feedback(data.model_dump())
+    if not result:
+        raise HTTPException(status_code=400, detail="Failed to submit feedback")
+    return result
+
+
+@router.get("/feedback/summary")
+async def get_feedback_summary():
+    return await _svc("validation").feedback_summary()
+
+
+@router.get("/feedback")
+async def list_feedback(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
+):
+    items, total = await _svc("validation").list_feedback(page, page_size)
+    return _paginated(items, total, page, page_size)
+
+
+@router.post("/leads", status_code=201)
+async def submit_lead(data: LeadCreate):
+    result = await _svc("validation").submit_lead(data.model_dump())
+    if not result:
+        raise HTTPException(status_code=400, detail="Failed to submit lead")
+    return result
+
+
+@router.get("/leads/summary")
+async def get_lead_funnel_summary():
+    return await _svc("validation").lead_funnel_summary()
+
+
+@router.get("/leads")
+async def list_leads(
+    status: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
+):
+    items, total = await _svc("validation").list_leads(status, page, page_size)
+    return _paginated(items, total, page, page_size)
+
+
+@router.patch("/leads/{lead_id}/status")
+async def update_lead_status(lead_id: str, data: LeadStatusUpdate):
+    result = await _svc("validation").update_lead_status(lead_id, data.status)
+    if not result:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    if result.get("error"):
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result

@@ -10,7 +10,7 @@ GraphRAG query engine used for product inquiries and technical support.
 
 import logging
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from models.models import BotResponse, CustomerMessage, MessageType
 

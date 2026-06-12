@@ -26,6 +26,7 @@ Agentic back-office / middle-office operating system for industrial MRO (Mainten
 - **Analytics Dashboard** — KPIs, revenue trends, top products/customers, real-time operational overview
 - **AI Chat Assistant** — Natural language queries for orders, products, and pricing
 - **Omnichannel Messaging** — WhatsApp Business API integration with webhook verification
+- **Customer Validation Loop** — In-app feedback widget on every page, ROI calculator, and pilot-lead capture with funnel reporting
 - **Monitoring** — Prometheus metrics, health checks, structured logging
 
 ## Architecture
@@ -120,6 +121,17 @@ pip install -r requirements.txt
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
+### Backend integration tests
+
+The suite runs the real services and HTTP routes against PostgreSQL —
+O2C lifecycle, quotes, pricing, inventory, RMA, validation loop, and
+DI/route-registration regression tests.
+
+```sh
+createdb indusai_test   # or set TEST_DATABASE_URL
+SECRET_KEY=any-32-char-secret-for-local-testing pytest tests/ -v
+```
+
 ### Frontend
 
 ```sh
@@ -157,6 +169,8 @@ npx tsc --noEmit -p tsconfig.app.json
 | Analytics | `/analytics/dashboard`, `/analytics/sales` | GET |
 | Channels | `/channels/stats`, `/channels/messages`, `/channels/escalations` | GET |
 | Chat | `/message` | POST |
+| Feedback | `/feedback`, `/feedback/summary` | GET, POST |
+| Leads | `/leads`, `/leads/summary`, `/leads/{id}/status` | GET, POST, PATCH |
 
 Health and monitoring: `GET /health`, `GET /health/detailed`, `GET /metrics`
 
@@ -178,8 +192,8 @@ See `.env.example` for the full list. Key variables:
 
 GitHub Actions runs on push/PR to `main` and `develop`:
 
-**Frontend job:** lint, type-check, test (28 tests), build
-**Backend job:** ruff lint, mypy type-check
+**Frontend job:** lint, type-check, test, build
+**Backend job:** ruff lint, mypy type-check, pytest integration suite against a PostgreSQL service container
 
 ## Project Structure
 

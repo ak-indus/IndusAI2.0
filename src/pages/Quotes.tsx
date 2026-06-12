@@ -4,7 +4,7 @@ import { DEMO_QUOTES } from "@/lib/demoData";
 import { formatCurrency, statusColor, cn } from "@/lib/utils";
 
 export default function Quotes() {
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["quotes"],
     queryFn: () => api.getQuotes(),
   });

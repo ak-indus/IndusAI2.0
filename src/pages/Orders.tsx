@@ -20,7 +20,7 @@ export default function Orders() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("");
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["orders", page, statusFilter],
     queryFn: () => api.getOrders(page, statusFilter),
   });

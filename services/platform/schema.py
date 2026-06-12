@@ -394,6 +394,35 @@ CREATE TABLE IF NOT EXISTS workflow_transitions (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Customer validation loop: in-app feedback from users / design partners
+CREATE TABLE IF NOT EXISTS product_feedback (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    score INTEGER NOT NULL CHECK (score BETWEEN 1 AND 5),
+    comment TEXT,
+    page VARCHAR(100),
+    persona VARCHAR(50),
+    contact_email VARCHAR(255),
+    source VARCHAR(30) DEFAULT 'in_app',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Customer validation loop: pilot / demo requests from prospects
+CREATE TABLE IF NOT EXISTS pilot_leads (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company VARCHAR(255) NOT NULL,
+    contact_name VARCHAR(255),
+    email VARCHAR(255) NOT NULL,
+    phone VARCHAR(50),
+    role VARCHAR(100),
+    monthly_order_lines INTEGER,
+    pain_points TEXT,
+    estimated_annual_savings DECIMAL(14,2),
+    source VARCHAR(50) DEFAULT 'roi_calculator',
+    status VARCHAR(30) DEFAULT 'new',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 """
 
 PLATFORM_INDEXES = """
@@ -463,4 +492,10 @@ CREATE INDEX IF NOT EXISTS idx_workflows_type ON workflows(workflow_type);
 CREATE INDEX IF NOT EXISTS idx_workflows_ref ON workflows(reference_type, reference_id);
 CREATE INDEX IF NOT EXISTS idx_workflows_state ON workflows(current_state);
 CREATE INDEX IF NOT EXISTS idx_wf_transitions_wf ON workflow_transitions(workflow_id);
+
+-- Validation loop
+CREATE INDEX IF NOT EXISTS idx_feedback_created ON product_feedback(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_feedback_page ON product_feedback(page);
+CREATE INDEX IF NOT EXISTS idx_leads_status ON pilot_leads(status);
+CREATE INDEX IF NOT EXISTS idx_leads_created ON pilot_leads(created_at DESC);
 """

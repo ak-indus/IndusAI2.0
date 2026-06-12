@@ -14,7 +14,6 @@ export default function Inventory() {
     data: stockData,
     isLoading: stockLoading,
     isError: stockError,
-    error: stockErr,
   } = useQuery({
     queryKey: ["inventory", stockPage],
     queryFn: () => api.getInventory(stockPage),
@@ -24,7 +23,6 @@ export default function Inventory() {
     data: alerts,
     isLoading: alertsLoading,
     isError: alertsError,
-    error: alertsErr,
   } = useQuery({
     queryKey: ["reorder-alerts"],
     queryFn: () => api.getReorderAlerts(),

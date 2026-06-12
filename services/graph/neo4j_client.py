@@ -45,7 +45,7 @@ class Neo4jClient:
 
     async def health_check(self) -> dict:
         try:
-            result = await self.execute_read("RETURN 1 AS ok")
+            await self.execute_read("RETURN 1 AS ok")
             return {"status": "healthy", "connected": True}
         except Exception as e:
             return {"status": "unhealthy", "error": str(e)}

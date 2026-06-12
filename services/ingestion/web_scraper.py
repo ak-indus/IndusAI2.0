@@ -8,7 +8,6 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any
 from urllib.parse import urljoin
 
 import httpx

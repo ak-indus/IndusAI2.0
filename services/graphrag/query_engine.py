@@ -9,7 +9,6 @@ Stage 5: LLM Response Generation
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any
 
 from services.ai.models import IntentType, IntentResult, EntityResult
 from services.ai.prompts import GRAPH_RESPONSE_PROMPT, SOURCING_RESPONSE_PROMPT
@@ -221,7 +220,6 @@ class GraphRAGQueryEngine:
 
             # Build SourcingResult objects
             from services.intelligence.price_comparator import SourcingResult
-            from datetime import datetime, timezone
 
             results = []
             for listing in listings:

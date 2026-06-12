@@ -17,7 +17,6 @@ import {
   TrendingUp,
   Clock,
   Receipt,
-  FileText,
   CheckCircle2,
   AlertTriangle,
   Send,

@@ -786,12 +786,12 @@ export default function KnowledgeGraph() {
                           <h3 className="font-semibold text-white">{(part.name as string) || (part.sku as string)}</h3>
                           <p className="mt-0.5 text-xs text-slate-500">
                             <span className="font-mono text-blue-400">{part.sku as string}</span>
-                            {part.manufacturer && <><span className="mx-1.5 text-slate-700">|</span>{part.manufacturer as string}</>}
-                            {part.category && <><span className="mx-1.5 text-slate-700">|</span>{part.category as string}</>}
+                            {Boolean(part.manufacturer) && <><span className="mx-1.5 text-slate-700">|</span>{part.manufacturer as string}</>}
+                            {Boolean(part.category) && <><span className="mx-1.5 text-slate-700">|</span>{part.category as string}</>}
                           </p>
                         </div>
                       </div>
-                      {part.description && <p className="mt-2 text-sm leading-relaxed text-slate-400">{part.description as string}</p>}
+                      {Boolean(part.description) && <p className="mt-2 text-sm leading-relaxed text-slate-400">{part.description as string}</p>}
                     </div>
                   ))}
                 </div>

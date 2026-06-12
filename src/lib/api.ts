@@ -234,6 +234,27 @@ export interface EscalationTicket {
   updated_at: string;
 }
 
+export interface FeedbackSubmission {
+  score: number;
+  comment?: string;
+  page?: string;
+  persona?: string;
+  contact_email?: string;
+  source?: string;
+}
+
+export interface LeadSubmission {
+  company: string;
+  contact_name?: string;
+  email: string;
+  phone?: string;
+  role?: string;
+  monthly_order_lines?: number;
+  pain_points?: string;
+  estimated_annual_savings?: number;
+  source?: string;
+}
+
 // ---------- API Functions ----------
 
 export const api = {
@@ -254,12 +275,13 @@ export const api = {
   getCustomers: (page = 1) => get<PaginatedResponse<Customer>>(`/customers?page=${page}&page_size=20`),
   getCustomer: (id: string) => get<Customer>(`/customers/${id}`),
 
-  // Orders
+  // Orders — lifecycle actions are POST endpoints on the backend
   getOrders: (page = 1, status = "") => get<PaginatedResponse<Order>>(`/orders?page=${page}&page_size=20${status ? `&status=${status}` : ""}`),
   getOrder: (id: string) => get<Order>(`/orders/${id}`),
-  submitOrder: (id: string) => patch<Order>(`/orders/${id}/submit`),
-  confirmOrder: (id: string) => patch<Order>(`/orders/${id}/confirm`),
-  shipOrder: (id: string) => patch<Order>(`/orders/${id}/ship`),
+  submitOrder: (id: string) => post<Order>(`/orders/${id}/submit`, {}),
+  confirmOrder: (id: string) => post<Order>(`/orders/${id}/confirm`, {}),
+  shipOrder: (id: string) => post<Order>(`/orders/${id}/ship`, {}),
+  deliverOrder: (id: string) => post<Order>(`/orders/${id}/deliver`, {}),
   createOrder: (data: unknown) => post<Order>("/orders", data),
 
   // Quotes
@@ -276,7 +298,7 @@ export const api = {
 
   // Invoices
   getInvoices: (page = 1, status = "") => get<PaginatedResponse<Invoice>>(`/invoices?page=${page}&page_size=20${status ? `&status=${status}` : ""}`),
-  getARaging: () => get<Record<string, { count: number; balance: number }>>("/invoices/ar-aging"),
+  getARaging: () => get<Record<string, { count: number; balance: number }>>("/invoices/aging"),
 
   // RMA
   getRMAs: (page = 1) => get<PaginatedResponse<RMA>>(`/rma?page=${page}&page_size=20`),
@@ -292,6 +314,12 @@ export const api = {
   // Pricing
   getPrice: (productId: string, qty = 1) => get<unknown>(`/pricing/${productId}?quantity=${qty}`),
   getPriceTiers: (productId: string) => get<unknown>(`/pricing/${productId}/tiers`),
+
+  // Validation loop
+  submitFeedback: (data: FeedbackSubmission) => post<{ id: string }>("/feedback", data),
+  submitLead: (data: LeadSubmission) => post<{ id: string; status: string }>("/leads", data),
+  updateLeadStatus: (id: string, status: string) =>
+    patch<{ id: string; status: string }>(`/leads/${id}/status`, { status }),
 
   // Channels / Omnichannel
   getChannelStats: () => get<ChannelStats>("/channels/stats"),

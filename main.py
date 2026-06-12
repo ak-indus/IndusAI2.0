@@ -71,6 +71,7 @@ from services.platform.procurement_service import ProcurementService
 from services.platform.invoice_service import InvoiceService
 from services.platform.rma_service import RMAService
 from services.platform.analytics_service import AnalyticsService
+from services.platform.validation_service import ValidationService
 from routes.platform import router as platform_router, set_services
 
 # Knowledge Graph & GraphRAG
@@ -262,17 +263,18 @@ comm_manager = CommunicationManager(logger=logger, settings=settings)
 # Platform services — initialised after DB pool is ready (see lifespan)
 erp_connector = MockERPConnector()
 workflow_engine = WorkflowEngine(db_manager, logger)
-product_service = ProductService(db_manager, logger)
+product_service = ProductService(db_manager, erp_connector, logger)
 inventory_service = InventoryService(db_manager, logger)
 customer_service = CustomerService(db_manager, logger)
 pricing_service = PricingService(db_manager, logger)
-order_service = OrderService(db_manager, customer_service, pricing_service,
-                             inventory_service, workflow_engine, logger)
-quote_service = QuoteService(db_manager, pricing_service, order_service, logger)
+order_service = OrderService(db_manager, inventory_service, pricing_service,
+                             customer_service, workflow_engine, logger)
+quote_service = QuoteService(db_manager, pricing_service, customer_service, logger)
 procurement_service = ProcurementService(db_manager, inventory_service, workflow_engine, logger)
 invoice_service = InvoiceService(db_manager, customer_service, logger)
 rma_service = RMAService(db_manager, inventory_service, workflow_engine, logger)
 analytics_service = AnalyticsService(db_manager, logger)
+validation_service = ValidationService(db_manager, logger)
 
 # Knowledge Graph services — initialised in lifespan after Neo4j connects
 neo4j_client = Neo4jClient(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password)
@@ -410,19 +412,21 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("Neo4j connection failed (non-fatal, graph features disabled): %s", e)
 
-    # Inject services into the platform API router
+    # Inject services into the platform API router.
+    # Keys MUST match the names used by routes/platform.py `_svc(...)` lookups.
     set_services({
-        "product_service": product_service,
-        "inventory_service": inventory_service,
-        "customer_service": customer_service,
-        "pricing_service": pricing_service,
-        "order_service": order_service,
-        "quote_service": quote_service,
-        "procurement_service": procurement_service,
-        "invoice_service": invoice_service,
-        "rma_service": rma_service,
-        "workflow_engine": workflow_engine,
-        "analytics_service": analytics_service,
+        "products": product_service,
+        "inventory": inventory_service,
+        "customers": customer_service,
+        "pricing": pricing_service,
+        "orders": order_service,
+        "quotes": quote_service,
+        "procurement": procurement_service,
+        "invoices": invoice_service,
+        "rma": rma_service,
+        "workflow": workflow_engine,
+        "analytics": analytics_service,
+        "validation": validation_service,
     })
 
     # Seed demo data in debug mode
@@ -457,10 +461,6 @@ app = FastAPI(
     version=APP_VERSION,
     lifespan=lifespan,
 )
-
-# Platform API routes
-app.include_router(platform_router)
-app.include_router(graph_router)
 
 # Rate limiter
 app.state.limiter = limiter
@@ -976,6 +976,17 @@ if settings.debug:
         """Generate a dev admin token."""
         token = create_admin_token("test_admin")
         return {"token": token, "usage": "Authorization: Bearer <token>"}
+
+
+# ===========================================================================
+# Router registration
+# ===========================================================================
+# Routers must be included AFTER every @platform_router route in this module
+# is defined — include_router() snapshots the router's routes at call time,
+# so the channels endpoints above would otherwise never be registered.
+
+app.include_router(platform_router)
+app.include_router(graph_router)
 
 
 # ===========================================================================

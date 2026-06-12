@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 
@@ -65,7 +64,8 @@ class OrderService:
         try:
             async with self.db.pool.acquire() as conn:
                 async with conn.transaction():
-                    # Process lines
+                    # Price all lines first; the order header must be inserted
+                    # before order_lines to satisfy the FK constraint.
                     lines_data = []
                     subtotal = 0.0
 
@@ -92,30 +92,17 @@ class OrderService:
                         line_total = round(qty * unit_price * (1 - discount_pct / 100), 2)
                         subtotal += line_total
 
-                        line_id = str(uuid.uuid4())
-                        warehouse = line.get("warehouse_code", "MAIN")
-
-                        await conn.execute(
-                            """
-                            INSERT INTO order_lines
-                                (id, order_id, line_number, product_id, sku,
-                                 description, quantity, unit_price, discount_percent,
-                                 line_total, warehouse_code)
-                            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-                            """,
-                            line_id, order_id, idx, line["product_id"],
-                            product["sku"], product["name"], qty,
-                            unit_price, discount_pct, line_total, warehouse,
-                        )
-
                         lines_data.append({
-                            "id": line_id,
+                            "id": str(uuid.uuid4()),
                             "line_number": idx,
                             "product_id": line["product_id"],
                             "sku": product["sku"],
+                            "description": product["name"],
                             "quantity": qty,
                             "unit_price": unit_price,
+                            "discount_percent": discount_pct,
                             "line_total": line_total,
+                            "warehouse_code": line.get("warehouse_code", "MAIN"),
                         })
 
                     tax_amount = round(subtotal * 0.0, 2)  # Tax calculation placeholder
@@ -141,6 +128,21 @@ class OrderService:
                         payment_terms, data.get("shipping_method"),
                         data.get("notes"), created_by,
                     )
+
+                    for ld in lines_data:
+                        await conn.execute(
+                            """
+                            INSERT INTO order_lines
+                                (id, order_id, line_number, product_id, sku,
+                                 description, quantity, unit_price, discount_percent,
+                                 line_total, warehouse_code)
+                            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+                            """,
+                            ld["id"], order_id, ld["line_number"], ld["product_id"],
+                            ld["sku"], ld["description"], ld["quantity"],
+                            ld["unit_price"], ld["discount_percent"],
+                            ld["line_total"], ld["warehouse_code"],
+                        )
 
             self.logger.info(f"Order created: {order_number} (${total_amount:,.2f})")
             return await self.get_order(order_id)

@@ -7,7 +7,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 
 
 class MessageType(Enum):

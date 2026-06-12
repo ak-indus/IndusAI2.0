@@ -14,7 +14,7 @@ export default function Products() {
   // Reset to page 1 when search changes
   const [appliedSearch, setAppliedSearch] = useState("");
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["products", page, appliedSearch],
     queryFn: () => api.getProducts(page, appliedSearch),
   });

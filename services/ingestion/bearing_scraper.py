@@ -7,7 +7,7 @@ structured bearing data (part numbers, specs, cross-references).
 import json
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from html import unescape
 
 import httpx

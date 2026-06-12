@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from services.ingestion.parser import CatalogParser
 from services.ingestion.normalizer import CatalogNormalizer
 from services.ingestion.resolver import EntityResolver
-from services.ingestion.graph_builder import GraphBuilder, BuildResult
+from services.ingestion.graph_builder import GraphBuilder
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,6 @@ Matches incoming products against existing graph nodes.
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any
 
 from services.ingestion.normalizer import NormalizedProduct
 
