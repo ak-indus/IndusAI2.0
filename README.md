@@ -24,6 +24,7 @@ Agentic back-office / middle-office operating system for industrial MRO (Mainten
 - **RMA / Returns** — Return authorization, approval workflow, goods receipt, refund processing
 - **Workflow Engine** — Configurable state machines for orders, POs, RMAs, credit and price approvals
 - **Analytics Dashboard** — KPIs, revenue trends, top products/customers, real-time operational overview
+- **AI Order Intake** — Converts an unstructured order (email body, pasted PO, WhatsApp message) into ERP-ready lines: confidence-scored catalog resolution, touchless vs needs-review classification, human disambiguation of ambiguous lines, and one-click commit to a draft order. Tracks a **touchless rate** (the pilot KPI). Runs deterministically on the catalog with no external AI dependency; LLM and knowledge-graph resolution are optional enhancement layers.
 - **AI Chat Assistant** — Natural language queries for orders, products, and pricing
 - **Omnichannel Messaging** — WhatsApp Business API integration with webhook verification
 - **Customer Validation Loop** — In-app feedback widget on every page, ROI calculator, and pilot-lead capture with funnel reporting
@@ -171,6 +172,7 @@ npx tsc --noEmit -p tsconfig.app.json
 | Chat | `/message` | POST |
 | Feedback | `/feedback`, `/feedback/summary` | GET, POST |
 | Leads | `/leads`, `/leads/summary`, `/leads/{id}/status` | GET, POST, PATCH |
+| Order Intake | `/intake/parse`, `/intake/{id}`, `/intake/{id}/commit`, `/intake/touchless-summary` | GET, POST |
 
 Health and monitoring: `GET /health`, `GET /health/detailed`, `GET /metrics`
 

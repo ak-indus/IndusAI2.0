@@ -616,6 +616,28 @@ class DashboardMetrics(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Order Intake (the validated wedge)
+# ---------------------------------------------------------------------------
+
+class IntakeParseRequest(BaseModel):
+    raw_text: str = Field(..., min_length=1, max_length=20000)
+    customer_external_id: Optional[str] = Field(None, max_length=100)
+    source_channel: str = Field(default="web", pattern=r"^(web|email|whatsapp|sms|fax|api)$")
+
+
+class IntakeCommitLine(BaseModel):
+    product_id: str
+    quantity: Decimal = Field(..., gt=0)
+    unit_price: Optional[Decimal] = None
+
+
+class IntakeCommitRequest(BaseModel):
+    # When omitted, all touchless lines from the run are committed.
+    lines: Optional[List[IntakeCommitLine]] = None
+    created_by: str = Field(default="intake", max_length=100)
+
+
+# ---------------------------------------------------------------------------
 # Validation Loop — Feedback & Pilot Leads
 # ---------------------------------------------------------------------------
 

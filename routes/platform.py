@@ -25,6 +25,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from models.domain import (
     CustomerContractCreate, CustomerCreate, FeedbackCreate, GoodsReceiptCreate,
+    IntakeCommitRequest, IntakeParseRequest,
     InvoiceCreate, InventoryAdjustment, LeadCreate, LeadStatusUpdate,
     OrderCreate, PaymentCreate, PurchaseOrderCreate, ProductCreate, ProductUpdate,
     QuoteCreate, RMACreate, SupplierCreate, WorkflowAction,
@@ -753,6 +754,64 @@ async def update_lead_status(lead_id: str, data: LeadStatusUpdate):
     result = await _svc("validation").update_lead_status(lead_id, data.status)
     if not result:
         raise HTTPException(status_code=404, detail="Lead not found")
+    if result.get("error"):
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+
+# ===================================================================
+# Order Intake (the validated wedge)
+# ===================================================================
+
+@router.post("/intake/parse", status_code=201)
+async def parse_intake(data: IntakeParseRequest):
+    result = await _svc("intake").parse_order(
+        data.raw_text,
+        customer_external_id=data.customer_external_id,
+        source_channel=data.source_channel,
+    )
+    if not result:
+        raise HTTPException(status_code=400, detail="Failed to parse order")
+    if result.get("error"):
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+
+@router.get("/intake/touchless-summary")
+async def get_touchless_summary():
+    return await _svc("intake").touchless_summary()
+
+
+@router.get("/intake")
+async def list_intake_runs(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
+):
+    items, total = await _svc("intake").list_runs(page, page_size)
+    return _paginated(items, total, page, page_size)
+
+
+@router.get("/intake/{run_id}")
+async def get_intake_run(run_id: str):
+    result = await _svc("intake").get_run(run_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Intake run not found")
+    return result
+
+
+@router.post("/intake/{run_id}/commit")
+async def commit_intake_run(run_id: str, data: IntakeCommitRequest):
+    lines = None
+    if data.lines is not None:
+        lines = [
+            {"product_id": ln.product_id,
+             "quantity": float(ln.quantity),
+             "unit_price": float(ln.unit_price) if ln.unit_price is not None else None}
+            for ln in data.lines
+        ]
+    result = await _svc("intake").commit_run(run_id, lines=lines, created_by=data.created_by)
+    if not result:
+        raise HTTPException(status_code=400, detail="Failed to commit intake run")
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
     return result

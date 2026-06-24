@@ -423,6 +423,42 @@ CREATE TABLE IF NOT EXISTS pilot_leads (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- AI Order Intake: the validated wedge. Each run is one unstructured order
+-- (email body / pasted PO / WhatsApp message) parsed into resolved lines.
+CREATE TABLE IF NOT EXISTS intake_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    source_channel VARCHAR(30) DEFAULT 'web',
+    raw_text TEXT NOT NULL,
+    customer_id UUID REFERENCES customers(id),
+    customer_external_id VARCHAR(100),
+    status VARCHAR(30) DEFAULT 'parsed',  -- parsed | committed
+    line_count INTEGER DEFAULT 0,
+    touchless_count INTEGER DEFAULT 0,
+    review_count INTEGER DEFAULT 0,
+    unresolved_count INTEGER DEFAULT 0,
+    touchless_rate DECIMAL(5,4) DEFAULT 0,  -- touchless_count / line_count
+    extraction_method VARCHAR(20) DEFAULT 'rules',  -- rules | llm
+    committed_order_id UUID REFERENCES orders(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    committed_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS intake_lines (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    run_id UUID NOT NULL REFERENCES intake_runs(id) ON DELETE CASCADE,
+    line_number INTEGER NOT NULL,
+    raw_text TEXT NOT NULL,
+    extracted_quantity DECIMAL(12,2) DEFAULT 1,
+    resolved_product_id UUID REFERENCES products(id),
+    resolved_sku VARCHAR(50),
+    resolved_name VARCHAR(500),
+    unit_price DECIMAL(12,4),
+    confidence DECIMAL(5,4) DEFAULT 0,
+    disposition VARCHAR(20) DEFAULT 'unresolved',  -- touchless | needs_review | unresolved
+    candidates JSONB DEFAULT '[]',  -- alternative matches for human disambiguation
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 """
 
 PLATFORM_INDEXES = """
@@ -498,4 +534,11 @@ CREATE INDEX IF NOT EXISTS idx_feedback_created ON product_feedback(created_at D
 CREATE INDEX IF NOT EXISTS idx_feedback_page ON product_feedback(page);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON pilot_leads(status);
 CREATE INDEX IF NOT EXISTS idx_leads_created ON pilot_leads(created_at DESC);
+
+-- Order intake
+CREATE INDEX IF NOT EXISTS idx_intake_runs_created ON intake_runs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_intake_runs_status ON intake_runs(status);
+CREATE INDEX IF NOT EXISTS idx_intake_runs_customer ON intake_runs(customer_id);
+CREATE INDEX IF NOT EXISTS idx_intake_lines_run ON intake_lines(run_id);
+CREATE INDEX IF NOT EXISTS idx_intake_lines_disposition ON intake_lines(disposition);
 """

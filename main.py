@@ -72,6 +72,7 @@ from services.platform.invoice_service import InvoiceService
 from services.platform.rma_service import RMAService
 from services.platform.analytics_service import AnalyticsService
 from services.platform.validation_service import ValidationService
+from services.platform.intake_service import OrderIntakeService
 from routes.platform import router as platform_router, set_services
 
 # Knowledge Graph & GraphRAG
@@ -363,6 +364,14 @@ business_logic = BusinessLogic(
     rma_service=rma_service,
     query_engine=_query_engine,
 )
+
+# Order intake — the validated wedge. LLM router and knowledge graph are
+# optional enhancement layers; the service resolves against the Postgres
+# catalog deterministically when they are absent.
+intake_service = OrderIntakeService(
+    db_manager, product_service, pricing_service, customer_service,
+    order_service, logger, llm_router=_llm_router, graph_service=graph_service,
+)
 chatbot = ChatbotEngine(
     logger=logger,
     business_logic=business_logic,
@@ -427,6 +436,7 @@ async def lifespan(app: FastAPI):
         "workflow": workflow_engine,
         "analytics": analytics_service,
         "validation": validation_service,
+        "intake": intake_service,
     })
 
     # Seed demo data in debug mode

@@ -255,6 +255,63 @@ export interface LeadSubmission {
   source?: string;
 }
 
+// ---------- Order Intake (the validated wedge) ----------
+
+export type IntakeDisposition = "touchless" | "needs_review" | "unresolved";
+
+export interface IntakeCandidate {
+  product_id: string;
+  sku: string;
+  name: string;
+}
+
+export interface IntakeLine {
+  id?: string;
+  line_number: number;
+  raw_text: string;
+  extracted_quantity: number;
+  resolved_product_id: string | null;
+  resolved_sku: string | null;
+  resolved_name: string | null;
+  unit_price: number | null;
+  confidence: number;
+  disposition: IntakeDisposition;
+  candidates: IntakeCandidate[];
+}
+
+export interface IntakeRun {
+  id: string;
+  source_channel: string;
+  raw_text: string;
+  customer_id: string | null;
+  customer_external_id: string | null;
+  status: "parsed" | "committed";
+  line_count: number;
+  touchless_count: number;
+  review_count: number;
+  unresolved_count: number;
+  touchless_rate: number;
+  committed_order_id?: string | null;
+  lines: IntakeLine[];
+}
+
+export interface TouchlessSummary {
+  runs: number;
+  total_lines: number;
+  touchless_lines: number;
+  review_lines: number;
+  unresolved_lines: number;
+  touchless_rate: number;
+  committed_orders: number;
+  by_day: Array<{ day: string; lines: number; touchless: number; touchless_rate: number }>;
+}
+
+export interface IntakeCommitLine {
+  product_id: string;
+  quantity: number;
+  unit_price?: number;
+}
+
 // ---------- API Functions ----------
 
 export const api = {
@@ -314,6 +371,14 @@ export const api = {
   // Pricing
   getPrice: (productId: string, qty = 1) => get<unknown>(`/pricing/${productId}?quantity=${qty}`),
   getPriceTiers: (productId: string) => get<unknown>(`/pricing/${productId}/tiers`),
+
+  // Order intake (the validated wedge)
+  parseIntake: (raw_text: string, customer_external_id?: string, source_channel = "web") =>
+    post<IntakeRun>("/intake/parse", { raw_text, customer_external_id, source_channel }),
+  commitIntake: (runId: string, lines?: IntakeCommitLine[]) =>
+    post<Order>(`/intake/${runId}/commit`, lines ? { lines } : {}),
+  getTouchlessSummary: () => get<TouchlessSummary>("/intake/touchless-summary"),
+  getIntakeRuns: (page = 1) => get<PaginatedResponse<IntakeRun>>(`/intake?page=${page}&page_size=20`),
 
   // Validation loop
   submitFeedback: (data: FeedbackSubmission) => post<{ id: string }>("/feedback", data),

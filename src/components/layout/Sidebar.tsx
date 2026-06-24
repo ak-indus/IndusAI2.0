@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
+  Inbox,
   Package,
   Warehouse,
   ClipboardList,
@@ -27,6 +28,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Back-Office",
     items: [
       { to: "/", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/intake", label: "Order Intake", icon: Inbox },
       { to: "/products", label: "Products", icon: Package },
       { to: "/inventory", label: "Inventory", icon: Warehouse },
       { to: "/orders", label: "Orders", icon: ClipboardList },
