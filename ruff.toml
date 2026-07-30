@@ -1,0 +1,16 @@
+# Pin the lint rule set so results are reproducible across ruff versions.
+# ruff 0.16 expanded its default select (adding E501 line-length, pyupgrade,
+# flake8-blind-except, etc.), which would flag ~900 pre-existing cosmetic
+# issues and make CI non-deterministic as the installed ruff floats. We enforce
+# the stable pyflakes + core pycodestyle set the project was written against;
+# style migrations (PEP 585/604 typing, line length) can be adopted
+# deliberately later rather than gating CI now.
+target-version = "py311"
+
+[lint]
+select = ["E4", "E7", "E9", "F"]
+
+[lint.per-file-ignores]
+# Test harness imports main/services after setting env vars (module-level
+# side effects), so imports intentionally follow statements.
+"tests/conftest.py" = ["E402"]

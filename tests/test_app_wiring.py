@@ -43,8 +43,35 @@ def test_invoice_and_rma_collaborators():
     assert main.procurement_service.inventory is main.inventory_service
 
 
+def _all_paths(app):
+    """Collect every route path, recursing into included sub-routers.
+
+    FastAPI/Starlette versions differ: older ones flatten included routes into
+    app.routes; newer ones (>=0.141 / starlette >=1.3) nest them under a lazy
+    router object. Recursing handles both.
+    """
+    paths = set()
+
+    def visit(routes):
+        for route in routes:
+            p = getattr(route, "path", None)
+            if p:
+                paths.add(p)
+            # Newer FastAPI wraps includes in a lazy router exposing its routes
+            # under `original_router`; older versions nest under `routes`.
+            included = getattr(route, "original_router", None)
+            if included is not None and getattr(included, "routes", None):
+                visit(included.routes)
+            sub = getattr(route, "routes", None)
+            if sub and not isinstance(sub, str):
+                visit(sub)
+
+    visit(app.routes)
+    return paths
+
+
 def test_critical_routes_registered():
-    paths = {route.path for route in main.app.routes}
+    paths = _all_paths(main.app)
     expected = [
         "/health",
         "/api/v1/message",
@@ -70,6 +97,14 @@ def test_critical_routes_registered():
         "/api/v1/feedback/summary",
         "/api/v1/leads",
         "/api/v1/leads/summary",
+        # Order intake (the validated wedge)
+        "/api/v1/intake/parse",
+        "/api/v1/intake/touchless-summary",
+        "/api/v1/intake/{run_id}/commit",
+        # ERP write-back (Prophet 21 first)
+        "/api/v1/erp/health",
+        "/api/v1/orders/{order_id}/push-to-erp",
+        "/api/v1/orders/{order_id}/erp-status",
     ]
     missing = [p for p in expected if p not in paths]
     assert not missing, f"Missing routes: {missing}"

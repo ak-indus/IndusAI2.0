@@ -77,7 +77,8 @@ class OrderIntakeService:
 
     def __init__(self, db_manager, product_service, pricing_service,
                  customer_service, order_service, logger,
-                 llm_router=None, graph_service=None):
+                 llm_router=None, graph_service=None,
+                 erp_sync=None, auto_push_erp=False):
         self.db = db_manager
         self.products = product_service
         self.pricing = pricing_service
@@ -87,6 +88,10 @@ class OrderIntakeService:
         # Optional enhancement layers — degrade gracefully when absent.
         self.llm = llm_router
         self.graph = graph_service
+        # Optional ERP write-back: when configured, a committed order is pushed
+        # to the ERP so intake lands a real order end-to-end.
+        self.erp_sync = erp_sync
+        self.auto_push_erp = auto_push_erp
 
     # ------------------------------------------------------------------
     # Parse
@@ -385,6 +390,17 @@ class OrderIntakeService:
                 order["id"], run_id,
             )
         self.logger.info(f"Intake run {run_id} committed to order {order['order_number']}")
+
+        # Push to the ERP end-to-end when configured. A sync failure is
+        # attached to the response but never fails the commit — the captured
+        # order is already safe in our system and the push is retryable.
+        if self.erp_sync and self.auto_push_erp:
+            try:
+                order["erp"] = await self.erp_sync.push_order(order["id"])
+            except Exception as e:
+                self.logger.error(f"Auto ERP push failed for {order['id']}: {e}")
+                order["erp"] = {"status": "failed", "error": str(e)}
+
         return order
 
     # ------------------------------------------------------------------

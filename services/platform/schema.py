@@ -459,6 +459,24 @@ CREATE TABLE IF NOT EXISTS intake_lines (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ERP write-back (Prophet 21 first). Orders carry the ERP order reference and
+-- sync state; every push attempt is logged for auditability and retry.
+ALTER TABLE orders
+    ADD COLUMN IF NOT EXISTS erp_order_no VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS erp_sync_status VARCHAR(20) DEFAULT 'not_synced',
+    ADD COLUMN IF NOT EXISTS erp_synced_at TIMESTAMPTZ;
+
+CREATE TABLE IF NOT EXISTS erp_sync_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    connector VARCHAR(30) NOT NULL,       -- mock | prophet21
+    status VARCHAR(20) NOT NULL,          -- synced | failed
+    erp_order_no VARCHAR(50),
+    request_summary JSONB DEFAULT '{}',
+    error TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 """
 
 PLATFORM_INDEXES = """
@@ -541,4 +559,9 @@ CREATE INDEX IF NOT EXISTS idx_intake_runs_status ON intake_runs(status);
 CREATE INDEX IF NOT EXISTS idx_intake_runs_customer ON intake_runs(customer_id);
 CREATE INDEX IF NOT EXISTS idx_intake_lines_run ON intake_lines(run_id);
 CREATE INDEX IF NOT EXISTS idx_intake_lines_disposition ON intake_lines(disposition);
+
+-- ERP sync
+CREATE INDEX IF NOT EXISTS idx_orders_erp_status ON orders(erp_sync_status);
+CREATE INDEX IF NOT EXISTS idx_erp_sync_log_order ON erp_sync_log(order_id);
+CREATE INDEX IF NOT EXISTS idx_erp_sync_log_created ON erp_sync_log(created_at DESC);
 """

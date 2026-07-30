@@ -36,6 +36,7 @@ from services.platform.quote_service import QuoteService  # noqa: E402
 from services.platform.rma_service import RMAService  # noqa: E402
 from services.platform.validation_service import ValidationService  # noqa: E402
 from services.platform.intake_service import OrderIntakeService  # noqa: E402
+from services.platform.erp_sync_service import ERPSyncService  # noqa: E402
 from services.platform.workflow_engine import WorkflowEngine  # noqa: E402
 
 TEST_DATABASE_URL = os.environ.get(
@@ -86,6 +87,7 @@ ALL_TABLES = [
     "rma_lines", "rma_requests",
     "payments", "invoice_lines", "invoices",
     "intake_lines", "intake_runs",
+    "erp_sync_log",
     "goods_receipt_lines", "goods_receipts",
     "purchase_order_lines", "purchase_orders",
     "supplier_products", "suppliers",
@@ -149,9 +151,15 @@ def services(db, logger):
     rma = RMAService(db, inventory, workflow, logger)
     analytics = AnalyticsService(db, logger)
     validation = ValidationService(db, logger)
+    # ERP write-back through the mock connector (deterministic; the Prophet 21
+    # connector has its own unit tests against a mocked HTTP transport).
+    erp = ERPSyncService(db, MockERPConnector(), orders, customers, logger,
+                         connector_name="mock")
     # Intake runs deterministically (no LLM router / graph) in tests — the
-    # catalog-only resolution path is exactly what we want to lock down.
-    intake = OrderIntakeService(db, products, pricing, customers, orders, logger)
+    # catalog-only resolution path is exactly what we want to lock down. ERP
+    # auto-push is wired so the end-to-end commit path is covered.
+    intake = OrderIntakeService(db, products, pricing, customers, orders, logger,
+                                erp_sync=erp, auto_push_erp=True)
     return {
         "products": products,
         "inventory": inventory,
@@ -166,6 +174,7 @@ def services(db, logger):
         "analytics": analytics,
         "validation": validation,
         "intake": intake,
+        "erp": erp,
     }
 
 

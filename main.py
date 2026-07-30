@@ -73,6 +73,8 @@ from services.platform.rma_service import RMAService
 from services.platform.analytics_service import AnalyticsService
 from services.platform.validation_service import ValidationService
 from services.platform.intake_service import OrderIntakeService
+from services.platform.erp_prophet21 import Prophet21Connector
+from services.platform.erp_sync_service import ERPSyncService
 from routes.platform import router as platform_router, set_services
 
 # Knowledge Graph & GraphRAG
@@ -184,6 +186,16 @@ class Settings(BaseSettings):
 
     # Voyage AI (embeddings)
     voyage_api_key: Optional[str] = Field(default=None)
+
+    # ERP write-back (Prophet 21 first). Default 'mock' keeps demo/dev working
+    # with no external ERP; set erp_provider=prophet21 + the P21 creds to write
+    # real sales orders. erp_auto_push controls whether order intake pushes on
+    # commit automatically.
+    erp_provider: str = Field(default="mock")  # mock | prophet21
+    erp_auto_push: bool = Field(default=True)
+    p21_base_url: Optional[str] = Field(default=None)
+    p21_username: Optional[str] = Field(default=None)
+    p21_password: Optional[str] = Field(default=None)
 
     @field_validator('secret_key')
     @classmethod
@@ -365,12 +377,31 @@ business_logic = BusinessLogic(
     query_engine=_query_engine,
 )
 
+# ERP write-back connector, selected by config. Default 'mock' keeps demo/dev
+# fully working with no external ERP; 'prophet21' writes real P21 sales orders.
+if settings.erp_provider == "prophet21" and settings.p21_base_url:
+    erp_write_connector = Prophet21Connector(
+        settings.p21_base_url, settings.p21_username or "",
+        settings.p21_password or "", logger,
+    )
+    erp_connector_name = "prophet21"
+else:
+    erp_write_connector = MockERPConnector()
+    erp_connector_name = "mock"
+
+erp_sync_service = ERPSyncService(
+    db_manager, erp_write_connector, order_service, customer_service,
+    logger, connector_name=erp_connector_name,
+)
+
 # Order intake — the validated wedge. LLM router and knowledge graph are
 # optional enhancement layers; the service resolves against the Postgres
-# catalog deterministically when they are absent.
+# catalog deterministically when they are absent. When an ERP is configured,
+# a committed order is pushed to it end-to-end.
 intake_service = OrderIntakeService(
     db_manager, product_service, pricing_service, customer_service,
     order_service, logger, llm_router=_llm_router, graph_service=graph_service,
+    erp_sync=erp_sync_service, auto_push_erp=settings.erp_auto_push,
 )
 chatbot = ChatbotEngine(
     logger=logger,
@@ -421,6 +452,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("Neo4j connection failed (non-fatal, graph features disabled): %s", e)
 
+    # Connect the ERP write-back connector (non-fatal; a committed order can
+    # still be captured and retried if the ERP is unreachable at startup).
+    try:
+        connected = await erp_write_connector.connect()
+        logger.info("ERP connector '%s' connected: %s", erp_connector_name, connected)
+    except Exception as e:
+        logger.warning("ERP connector connect failed (non-fatal): %s", e)
+
     # Inject services into the platform API router.
     # Keys MUST match the names used by routes/platform.py `_svc(...)` lookups.
     set_services({
@@ -437,6 +476,7 @@ async def lifespan(app: FastAPI):
         "analytics": analytics_service,
         "validation": validation_service,
         "intake": intake_service,
+        "erp": erp_sync_service,
     })
 
     # Seed demo data in debug mode

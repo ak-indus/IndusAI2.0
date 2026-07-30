@@ -815,3 +815,30 @@ async def commit_intake_run(run_id: str, data: IntakeCommitRequest):
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
     return result
+
+
+# ===================================================================
+# ERP write-back (Prophet 21 first)
+# ===================================================================
+
+@router.get("/erp/health")
+async def erp_health():
+    return await _svc("erp").health()
+
+
+@router.get("/erp/failures")
+async def erp_failures():
+    return await _svc("erp").list_failures()
+
+
+@router.post("/orders/{order_id}/push-to-erp")
+async def push_order_to_erp(order_id: str):
+    result = await _svc("erp").push_order(order_id)
+    if result.get("status") == "failed":
+        raise HTTPException(status_code=502, detail=result.get("error") or "ERP push failed")
+    return result
+
+
+@router.get("/orders/{order_id}/erp-status")
+async def order_erp_status(order_id: str):
+    return await _svc("erp").get_sync_status(order_id)

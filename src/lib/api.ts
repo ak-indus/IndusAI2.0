@@ -79,6 +79,13 @@ export interface Customer {
   credit_used: number;
 }
 
+export interface ErpSyncResult {
+  status: "synced" | "failed";
+  erp_order_no?: string | null;
+  connector: string;
+  error?: string | null;
+}
+
 export interface Order {
   id: string;
   order_number: string;
@@ -90,6 +97,8 @@ export interface Order {
   subtotal: number;
   payment_terms: string;
   lines?: OrderLine[];
+  // Present on the order-intake commit response when ERP write-back ran.
+  erp?: ErpSyncResult;
 }
 
 export interface OrderLine {

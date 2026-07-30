@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Inbox, Sparkles, CheckCircle2, AlertTriangle, XCircle, ArrowRight, Gauge } from "lucide-react";
 import { toast } from "sonner";
-import { api, type IntakeRun, type TouchlessSummary } from "@/lib/api";
+import { api, type IntakeRun, type Order, type TouchlessSummary } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import {
   buildCommitLines,
@@ -47,7 +47,7 @@ export default function OrderIntake() {
   const [committing, setCommitting] = useState(false);
   const [run, setRun] = useState<IntakeRun | null>(null);
   const [selections, setSelections] = useState<ReviewSelections>({});
-  const [committedOrderId, setCommittedOrderId] = useState<string | null>(null);
+  const [committedOrder, setCommittedOrder] = useState<Order | null>(null);
   const [summary, setSummary] = useState<TouchlessSummary | null>(null);
 
   const loadSummary = useCallback(async () => {
@@ -70,7 +70,7 @@ export default function OrderIntake() {
     setParsing(true);
     setRun(null);
     setSelections({});
-    setCommittedOrderId(null);
+    setCommittedOrder(null);
     try {
       const result = await api.parseIntake(rawText, customerId.trim() || undefined);
       setRun(result);
@@ -92,7 +92,7 @@ export default function OrderIntake() {
     setCommitting(true);
     try {
       const order = await api.commitIntake(run.id, lines);
-      setCommittedOrderId(order.id);
+      setCommittedOrder(order);
       loadSummary();
       toast.success(`Draft order ${order.order_number} created (${lines.length} lines).`);
     } catch (e) {
@@ -209,12 +209,21 @@ export default function OrderIntake() {
                 </div>
               </div>
 
-              {committedOrderId ? (
+              {committedOrder ? (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-center">
                   <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-emerald-600" />
-                  <p className="font-semibold text-slate-800">Draft order created</p>
+                  <p className="font-semibold text-slate-800">
+                    Draft order {committedOrder.order_number} created
+                  </p>
+                  {committedOrder.erp && (
+                    <p className={`mt-1 text-sm font-medium ${committedOrder.erp.status === "synced" ? "text-emerald-700" : "text-amber-700"}`}>
+                      {committedOrder.erp.status === "synced"
+                        ? `Landed in ERP as ${committedOrder.erp.erp_order_no} (${committedOrder.erp.connector})`
+                        : `ERP sync failed — order saved, retryable (${committedOrder.erp.error ?? "unknown error"})`}
+                    </p>
+                  )}
                   <Link
-                    to={`/orders/${committedOrderId}`}
+                    to={`/orders/${committedOrder.id}`}
                     className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
                   >
                     View order <ArrowRight className="h-3.5 w-3.5" />
