@@ -13,6 +13,8 @@
 
 **The single most important fact**: this repository has had **zero commits since March 14, 2026** — five months of dormancy in the fastest-consolidating window this market will ever see. Every strategic recommendation below is downstream of ending that dormancy.
 
+**Addendum (§6)**: a deep dive on the **operate model** — running the quote/order desk as an AI-backed managed service rather than (only) licensing software — concludes it is validated at scale in adjacent domains (Crescendo, Pace, Sierra, Metropolis), unoccupied in distribution, and realistically reaches **62% gross margin by month 12 and 65–70% mature** per account, roughly double traditional BPO and within ~5–10 points of today's AI-software norm. It becomes the recommended premium tier above the license land.
+
 | Question | March 2026 answer | August 2026 answer |
 |---|---|---|
 | Who is the customer? | Chemical distributors → suppliers → MRO → international | **Mid-market chemical & specialty distributors ($20–500M), full stop, for 18 months** |
@@ -202,7 +204,98 @@ Proton's ~$21.5M M&A offer at ~2x revenue is the comp to internalize: distributo
 
 ---
 
-## 6. Sources
+## 6. The Operate Model — Quote/Order Desk as a Service (BPO-as-a-Service, AI-Backed)
+
+*Added August 20, 2026, from a dedicated research workstream on AI-operated services. This extends §2: the March GTM doc's instinct — "Don't sell software. Replace an outsourced cost center." — was directionally right; this section replaces its hand-waved economics with evidenced ones.*
+
+### 6.1 The model, stated plainly
+
+Instead of licensing a platform, **IndusAI operates the customer's quote/order desk** on a recurring 2–3-year contract: inbound RFQs, POs, and product questions flow to IndusAI; AI processes them; a small exception team (offshore agents + onshore QA) handles what AI can't; clean, compliance-complete orders and quotes land in the customer's ERP under SLA. The customer pays for the outcome — clean documents — out of the **labor budget**, not the software budget. This matters because the labor budget is 6x the software budget (Sequoia's "Services: The New Software" framing) and because the mid-market distributor's actual constraint is retiring CSRs, not missing tools.
+
+### 6.2 The reference companies (what's proven vs. claimed)
+
+| Company | Play | The hard fact | The caveat |
+|---|---|---|---|
+| **Crescendo** ($500M val., GC) | AI-native contact center that **bought BPO PartnerHero** and migrated its book onto AI | **>$100M ARR in under 2 years**; pricing $2,900/mo + $1.25–2.25 per solved case, no charge if unresolved | The "60–65%+ GM on migrated books" figure is press/investor claim, not audited |
+| **Pace** ($375M, Sequoia+Thrive, May 2026) | "Agentic process outsourcer" replacing insurance BPO | $46M Series B; pay-per-successful-transaction; claims 50–75% savings vs. BPO | Savings % and 99% accuracy are vendor claims |
+| **Sierra** ($15.8B, $200M ARR) | Defined the category's pricing: **~$1.50 per resolved interaction** | Outcome pricing scales to enterprise | Platform, not operator; GM undisclosed |
+| **Metropolis** ($5B val., profitable) | "Buy the customer, install the AI" — took SP+ private for ~$1.5B, became the largest US parking operator | Profitability reported; the acquisition is the proof the model finances | Consolidated margins undisclosed |
+| **Invisible Technologies** ($2B+ val.) | Human+AI orchestration outsourcer | **$134M revenue, ~11% EBITDA** — rare audited-grade numbers | **The cautionary datapoint**: human-heavy AI ops without a rising automation rate converges to BPO economics |
+| **Long Lake / Thrive Holdings / Dwelly** | AI rollups of services firms (HOA mgmt, accounting, lettings) | Long Lake: $100M EBITDA <2 yrs; Dwelly: property managers handle **300 units vs. 100 pre-AI** | Rollup EBITDA is partly acquired, not AI-created |
+| **HappyRobot** ($1.2B, Aug 2026) | Voice AI workers operating freight comms | 150+ enterprise logos, **NDR >150%** — closest live analog to an AI order desk in gritty B2B | — |
+| **Conexiom / Esker** | Order-entry *software* (not operators) | Conexiom **87% touchless**; Esker **67% avg / 90%+ best-in-class**, 11→3 min/order, 9%→<1% errors | **Nobody operates the order desk as a service — this is the open lane** |
+
+### 6.3 The margin ladder (evidence, not hope)
+
+| Rung | Gross margin | Anchor evidence |
+|---|---|---|
+| Traditional BPO | **~35%** GM, 10–20% EBITDA | Genpact FY2025 GM 36.6%; WNS 35.4%; Concentrix ~35.1%; TaskUs adj. EBITDA 21% |
+| AI-augmented, human-heavy | 40–50% GM, ~11% EBITDA | Invisible: $134M rev, 11% EBITDA |
+| **AI-native operate (this model)** | **55–70%** GM | Crescendo claim 60–65%+; Elad Gil thesis (services GM 10%→40%); Dwelly 3x productivity |
+| AI software (no ops) | 50–60% today | ICONIQ: avg AI product GM **52%** in 2026, inference = 23% of revenue |
+| Classic SaaS | 75–85% | Standard benchmarks; note AI software no longer earns these either |
+
+The strategically important line: **the gap between a well-run AI-operate business and AI software is now only ~5–10 points of gross margin** — while the operate model collects 3–6x the contract value per customer and builds the data moat faster (every document flows through you; every human correction trains the cross-reference graph *you* own). What keeps operate below SaaS forever: exception humans (never zero), QA sampling, implementation labor, inference as true COGS. What makes it better than BPO forever: **margin improves with account tenure** (automation compounds) instead of eroding with wage inflation.
+
+### 6.4 Worked unit economics — one $100M distributor
+
+Assumptions (conservative, sourced): 10 CSRs at ~$85K loaded (~$850K labor line, Glassdoor avg $65.5K base); 20–40% of CSR time on re-keying → **$300–425K of replaceable labor**; ~60,000 documents/yr (45K orders + 15K quotes); touchless ramp **60% (mo 3) → 75% (mo 12) → 85% (mo 24)** — deliberately below Conexiom's 87% and Esker's 90%+ best-in-class; exceptions handled offshore at $15/hr with 6 min/doc; inference ~$0.15/doc blended; **contract $240K/yr ($4.00/document)** ≈ 60–75% of replaced labor, so the customer saves $100–185K/yr *and* gets minutes-not-hours turnaround with error rates below 1%.
+
+| Annualized run-rate | Month 3 (60%) | Month 12 (75%) | Month 24 (85%) |
+|---|---|---|---|
+| Revenue | $240,000 | $240,000 | $240,000 |
+| Exception labor | $43,200 | $27,000 | $16,200 |
+| Onshore QA (fractional) | $45,000 | $31,500 | $18,000 |
+| Inference + tooling | $12,000 | $10,000 | $9,000 |
+| Account ops | $25,000 | $22,000 | $20,000 |
+| Implementation (yr-1, ~$40K) | $40,000 | — | — |
+| **Gross margin** | **31%** (48% ex-impl.) | **62%** | **74% → haircut to 65–70%** |
+
+At 10 accounts (=$2.4M ARR) the blended company GM is ~55% — mixing ramping and mature accounts — which is exactly the honest sector range. Inference runs 4–5% of revenue here (vs. ICONIQ's 23% average) because documents are cheap relative to real-time voice; budget 8–12% if a voice front door is added.
+
+**Kill criterion at the account level**: any account that can't pass **70% touchless by month 12** gets re-priced or exited — Invisible's 11% EBITDA is what ignoring this looks like at scale.
+
+### 6.5 Contract structure
+
+1. **Base** $3–6K/mo (QA, account management, connectivity — anchored on Crescendo's $2,900/mo).
+2. **$2.50–4.50 per clean document** — charged only when it lands in the ERP accurately; exceptions bounced back are free (per-solve logic; order lines carry more value than support tickets, justifying the premium over Fin's $0.99/Sierra's ~$1.50 per resolution).
+3. **Committed annual volume, 2–3-year term**, with a planned month-13 step-down of 5–10% — pre-empting the "AI discount" clients are already demanding across services.
+4. **SLAs that matter to a distributor**: ≥99% line-item accuracy (audited by sampling), <15-min standard-PO turnaround, 100% same-day quote response, named-human escalation. **Guarantee**: no charge for misprocessed orders; 60-day out if SLAs missed twice — the trust unlock for a pre-revenue vendor.
+5. **The license off-ramp** (this reconciles with §2.3's $25–75K land): keep a "co-pilot license" tier at ~40% of the operated price where the customer's CSRs work in the loop on our platform. It serves two jobs — a low-friction land for customers not ready to hand over the desk, and the **insourcing off-ramp that keeps the revenue** when a proven account wants to bring the desk back in-house (they will try; Santander/GM-style insourcing reversals and "renew vs. bring AI in-house" evaluations are now standard). Land on whichever tier the account's culture allows; migrate both directions.
+6. **Gain-share later, never first** — share of documented error-cost reduction or quote-speed win-rate lift as an expansion module; measurement disputes kill first deals.
+7. **Chemicals-specific**: liability is real when you *operate* — a mispriced quote or a wrong-product hazmat shipment is our error. E&O insurance, indemnity caps, and explicit dangerous-goods handling clauses go in every contract from day one. No software vendor carries this; it is also part of why the YC swarm won't follow.
+
+### 6.6 Investor framing — how this avoids the services discount
+
+Tech-enabled services trade at 1–4x revenue vs. 3–15x for software; ">80% GM" screens are how allocators triage. But the same market pays Sierra ~79x ARR and funded Crescendo, Pace, and Thrive Holdings precisely for **labor-budget TAM captured with software-like economics** (Foundation Capital's $4.6T services-as-software framing). The difference between the two receptions is instrumentation. From customer #1, report:
+
+- **Automation-rate curve per account cohort** (60→75→85) — the "margin escalator" chart; the single graph separating this from BPO;
+- **Gross margin by account-tenure cohort** (month-24 accounts at 65–70% even while blended is ~55%);
+- **Documents per exception-handler FTE** (the Dwelly 100→300 metric — the number that raised $170M);
+- **Revenue per employee** (BPO ~$40–60K; target $200K+);
+- **NRR** on committed-volume contracts (HappyRobot's >150% NDR anchored a $1.2B round);
+- **Inference as % of revenue, declining** (vs. the 23% ICONIQ benchmark).
+
+One-line narrative: *"We are not a services company that uses AI; we are a software company that collects the labor budget. Our COGS is a decaying function of account age."* Then prove it with the cohort curves.
+
+### 6.7 Impact on the assessments and the scoreboard
+
+**VC lens (amends §3)**: the operate model *raises* the credible ACV from $25–75K to **$200–300K per mid-market account** and accelerates the data moat (all documents flow through us), at the cost of gross margin optics in year 1 (~48% ex-implementation) and operational complexity (offshore exception team, E&O, SLAs). Given that pilots-substitute-for-revenue is the 2026 seed bar anyway, running the **first 3–5 design partners as operated desks** is strictly better evidence than license pilots: it produces the automation-rate and cohort-margin curves investors now fund. Fundability conditions in §3.2 stand; condition 2 (measurable flywheel) is *easier* to satisfy under the operate model. Seed sizing bands unchanged; the strong case ($5–9M) becomes more reachable with two operated accounts at $240K showing a 60→75% curve.
+
+**CTO lens (amends §4)**: the operate model changes the build priorities less than it appears — the P1 email/RFQ→quote pipeline (§4.3 item 7) *is* the operated desk's engine; what's added is an **exception-handling workbench** (queue, approve/correct UI, correction capture — which doubles as the flywheel telemetry), **per-document cost accounting**, and **SLA/accuracy instrumentation** (sampled audits). These belong in P1. What must be true operationally that code can't fix: an offshore exception-agent partner by the second account, and QA discipline from day one — the audit's finding that demo fabrications were presented as live capability is exactly the behavior that, in an operate model, becomes contractual breach rather than embarrassment. The integrity bar goes *up* when you operate.
+
+**Scoreboard (amends §5)**: months 4–6 milestone becomes "first operated-desk conversion at $150–240K *or* first license conversion at $25–75K"; month-12 target becomes **$500K–$1M ARR with at least two operated accounts past 70% touchless**. Kill criteria unchanged, plus the per-account 70%-by-month-12 automation floor.
+
+### 6.8 Failure modes specific to operating (beyond §3/§4 risks)
+
+1. **Pricing deflation**: clients will demand AI productivity passed through (Accenture managed-services bookings -15% YoY; agencies fielding "AI discount" demands). Control it with planned step-downs and value-anchored per-document pricing (vs. APQC's ~$100 full-process cost per PO).
+2. **Insourcing after proof** — mitigated by the license off-ramp and by owning the customer-specific data asset (part cross-refs, pricing history, exception rules) that makes the desk smarter than any tool they could buy.
+3. **The exception tail** — the last 15% of documents (handwritten POs, spec sheets, credit holds) costs disproportionately; this is where the margin model dies quietly. Instrument it weekly.
+4. **CSR politics**: the buyer's real fear is customer defection, not labor cost. Position as "CSRs promoted to proactive selling," never headcount removal — this is also the only framing that survives a family-owned culture (56–75% of the segment).
+
+---
+
+## 7. Sources
 
 **Market**: Grainger FY2025 10-K (sec.gov); Precedence Research MRO; MDM Top Distributors Report 2025 & Economic Outlook (mdm.com); DSG State of AI in Distribution 2026 & State of Distributor Technology 2026 & State of eCommerce 2024 (distributionstrategy.com); NAW AI in Distribution (naw.org); Industrial Distribution Survey of Distributor Operations (inddist.com); PMCF Distribution M&A Pulse Q1 2026; CT Acquisitions multiples & PE roll-up tracker; Business Wire (DSG take-private); Sonepar & Applied Industrial newsrooms; MarketScale & Digital Commerce 360 (Amazon Business $60B, agentic procurement); Investing.com (Fastenal Q2 2026); Industrial Supply Trends (MSC FY2026 Q3); ICIS Top 100 2026; ACD/PCI Magazine; The Business Research Company (specialty chem distribution); Conexiom manual-order-entry cost data; Prokeep 2025 Distribution Report.
 
@@ -213,6 +306,8 @@ Proton's ~$21.5M M&A offer at ~2x revenue is the comp to internalize: distributo
 **Buyers/GTM**: Avasant/Computer Economics (distribution IT spend); DCKAP/B2Sell/Greywolf (P21 integration reality); 6sense/Top10ERP/Scaled Solutions (ERP share); Proton customer pages (MSC, Aquifer); Conexiom/Esker/checkthat.ai (pricing benchmarks); DataToolIndex (Zilliant); AD HQ & NetPlus Alliance & ISA & Datacor-NACD (channel programs); Aurora Inbox/Wapikit (WhatsApp B2B geography); Optifai/HumanR (sales-cycle benchmarks).
 
 **Technical**: full repository audit at HEAD `b3cce4c`, August 20, 2026 (claim-by-claim verification against `docs/investor_memo.md` and `LEADERSHIP_REVIEW_MARCH_2026.md`).
+
+**Operate model (§6)**: Crescendo newsroom & getmacha/Sacra (pricing, $100M ARR, PartnerHero); Forbes (Pace $46M Series B; AI margin-lever reporting); Value Add VC & Sacra & Sierra blog (Sierra outcome pricing, $200M ARR); TechCrunch/CNBC/Metropolis newsroom (SP+ acquisition, $1.6B raise); Sacra & BusinessWire (Invisible Technologies $134M revenue / ~11% EBITDA); CNBC & Capital Founders (Long Lake, AI-rollup playbook); TechCrunch/Forbes (Thrive Holdings $2B at $12B); Sifted/TNW (Dwelly 3x productivity); AI Weekly & Sacra (HappyRobot $150M Series C, NDR >150%); Conexiom & Esker benchmark pages (touchless rates, per-order times, error rates); Genpact/WNS/Concentrix/TaskUs FY2025 results (BPO margin baselines); Glassdoor (distributor CSR salaries); Ascend/APQC (cost per PO); Text.com/Helpware (BPO FTE pricing); Parsli (per-document inference costs); Aleph/ICONIQ & SaaSMag (AI gross margins, inference share); CT Acquisitions & Aventis (services vs. SaaS multiples); Foundation Capital ($4.6T services-as-software); Growth Unhinged (hybrid pricing, post-sales headcount); Hackett Group (BPO contract renewal/incentives); Storyboard18/WPP & Merlintrader/Bloomberg (services pricing deflation, Accenture); GetVocal (BPO insourcing dynamics); AI Roll-up Nexus investor survey (integration risk).
 
 ---
 
