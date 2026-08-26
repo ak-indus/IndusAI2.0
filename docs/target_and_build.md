@@ -6,11 +6,50 @@
 
 ---
 
-## 1. WHO — Targets
+## 1. WHO — Targets (named, evidence-backed; compiled August 26, 2026)
 
-*(Compiled from named-target research, August 26, 2026 — see §1.1–1.4 below.)*
+**The headline finding**: the Anadarko Basin is in the largest ownership-transfer wave in a decade — Flywheel/Stone Ridge absorbed both ConocoPhillips' ($1.3B) and Ovintiv's ($3.0B) Anadarko positions inside 12 months (two full owner-deck re-decks on one private OKC organization), Diversified Energy closed ~$2B of deals in 2025 with Birch Resources in talks, and Mach Natural Resources closed $1.3B across two basins **and has an open Division Order Technician posting right now**. The beachhead is OKC/Tulsa + Midland/Fort Worth, and the wave is live this quarter.
 
-<!-- TARGET LIST INSERTED FROM RESEARCH -->
+### 1.1 Segment A — Operators with transfer-wave triggers (call first)
+
+| Priority | Company (HQ/basin) | Trigger evidence |
+|---|---|---|
+| 1 | **Mach Natural Resources** (OKC, Anadarko+Permian+San Juan) | Closed Sabinal + IKAV San Juan (~$1.3B, Sept 2025, production nearly doubled) AND hiring a Division Order Technician in OKC — the strongest evidence chain on the board |
+| 1 | **Flywheel Energy / Stone Ridge** (OKC, Anadarko) | Absorbed COP's $1.3B and Ovintiv's $3.0B Anadarko decks in ~12 months — two mass re-decks, one integration team |
+| 1 | **Mewbourne Oil** (Tyler, Delaware+Anadarko) | Three simultaneous open land-admin/division-order postings — per-file overflow pitch while they hire |
+| 1 | **Diversified Energy** (OK ops) | Maverick $1.28B + Canvas $550M + Camino $1.175B closed; Birch (> $1.7B) in talks Aug 2026 — serial-acquirer integration machine |
+| 1 | **SandRidge Energy** (OKC) | Cherokee Play acquisition closing **Q3 2026** — the re-deck starts this quarter; perfectly timed call |
+| 1 | **New Height Energy** (TX, Midland) | "Transformative" Midland producing-asset close April 2026; new family-office platform, almost certainly no DO desk yet |
+| 1 | **Presidio Production Co.** (Fort Worth, W. Anadarko) | Going public via SPAC; 2,000+ mature wells (fractionalized decks); audit-proof documentation just became an SEC-grade need — CFO pitch |
+| 1 | **Unitex Oil & Gas** (Midland, conventional Permian) | Open combined Land Tech/DOA posting (Enertia shop) — a one-person desk drowning; the exact fractional profile |
+| 2 | Validus Energy (Tulsa ops) · Scout Energy (Dallas/Permian) · TXO Partners (Fort Worth) · Riley Permian (OKC) · Langford Energy (Dallas/Midland) · Freedom Operating (Tulsa, open DOA posting) · Texland (Fort Worth, CBP waterfloods = maximum fractionalization) | Each with a cited 2024–26 acquisition or posting; overflow/project angles at Coterra, Permian Resources, Range (open senior DOA reqs) |
+
+**Do NOT cold-call as standalone (merged/dead)**: Citizen Energy (→Validus), Franklin Mountain (→Coterra), Camino & Canvas (→Diversified), CrownRock (→Oxy), Sabinal/IKAV (→Mach), Murchison (→Langford), Silverback II (→Riley), Mesa Royalties (→Kimbell). APA's $950M Central Basin Platform buyer was undisclosed — ask the NADOA network who's working those decks.
+
+### 1.2 Segment B — Minerals funds & mineral managers (customers AND referral flywheel)
+
+Priority 1: **Argent Mineral Management** (~3M acres; Argent Trust just assumed six royalty trusts from Simmons Bank — a trustee transition is mass transfer filings), **BOK Financial Specialty Assets** (Tulsa; 12,000 trust accounts incl. minerals — death/trust transfers are their daily work), **Farmers National Company** (one of the largest US mineral managers, OKC+TX practices), **Haymaker Minerals III** (fresh multi-state royalty package across thousands of wells = transfer filings at dozens of operators), **Post Oak Minerals** ($475M Permian minerals + $600M Fund V, May 2025). Priority 2: CW Mineral Group, Guardian, Trust Company of Oklahoma, Spicewood, Lime Rock Resources minerals, Fortis. The manager pitch inverts: *"we speak operator DOI language and get your owners out of suspense faster."*
+
+### 1.3 Segment C — Channel, referral, and competitive intelligence
+
+- **PakEnergy partner program** — precedent proven: PetroLedger (a direct competitor) is an official PakEnergy partner. Apply; work the PakEnergy booth at NAPE 2026 (they're a Premier Sponsor). W Energy (Tulsa): no formal program found — approach BD directly.
+- **Land/title shops as referral** (they staff title, not transfer administration): Purple Land Management (also runs project DOA staffing — both competitor and overflow partner), Doggett (heirship/curative — natural hand-off), Peak (Midland), Stockyards (Fort Worth), Percheron.
+- **Unclaimed-property advisors as referral**: Georgeson's O&G UP practice; **UPPO** (which calls O&G "the new frontier" of escheat enforcement — Delaware VDA invitations are actively targeting royalty suspense); Baker Tilly (PakEnergy's advisory partner — mid-market auditor referrals).
+- **Competitors to study**: ExTex (DO + unclaimed-property outsourcing), Valor operator services, PetroLedger.
+- **Free prospecting**: The Mineral Rights Forum's Division Orders board — suspended owners publicly name slow operators; every complaint thread is a lead.
+
+### 1.4 Outreach infrastructure & personas
+
+- **⏰ NADOA 52nd Annual Institute: September 9–11, 2026, Omni Las Colinas, Irving, TX — two weeks from this writing.** The division-order staff of targets 1–10 will be in the building. Register now; this is also where the fractional CDOA gets found (no public directory exists — the routes are LinkedIn "CDOA" headline search, NADOA board referrals, and the Institute floor).
+- **Local chapters**: HADOA (Houston), DALWORTH (DFW), PBADOA (Midland), SADOA (OKC), MAADOA (Mid-America) — monthly meetings are the referred-call machine.
+- **Who buys what**: division orders sit in **Land** (DO Supervisor → Land Admin Manager → VP Land) but **suspense sits in Accounting** (Revenue Accounting Manager → Controller/CFO) — sell file-processing to Land, sell the Risk Review + escheat-risk retainer to the Controller/CFO. At <30-person operators the CFO or owner is the only buyer.
+- **Trigger events that open a call**: acquisition close +30–90 days; a DOA posting (especially reposted >60 days); an unclaimed-property VDA invitation or audit notice; a PakEnergy/W Energy/Enertia system conversion; SPAC/IPO or lender audit; state escheat deadlines (TX July 1, OK Nov 1).
+- **Weekly pain radar**: Indeed/ZipRecruiter searches for "division order analyst" in OK/Houston/Midland; Google `"division order" (analyst OR technician) hiring site:lever.co OR site:greenhouse.io` for operator ATS pages.
+
+### 1.5 The first 10 calls, ranked
+
+1. Mach Natural Resources · 2. Flywheel/Stone Ridge · 3. Mewbourne · 4. Diversified Energy · 5. SandRidge · 6. New Height Energy · 7. Presidio Production · 8. Unitex · 9. Argent Mineral Management · 10. Haymaker Minerals III.
+**Do-first non-sales actions**: register for the NADOA Institute (Sept 9–11); apply to the PakEnergy partner program.
 
 ---
 
