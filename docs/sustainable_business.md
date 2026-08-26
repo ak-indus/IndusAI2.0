@@ -1,5 +1,7 @@
 # The Sustainable Business — Final Synthesis
 
+> **⚠ AMENDED — August 26, 2026 (same day): the synthesis itself was hostile-validated and materially corrected.** Two final validators — a market breaker on the PVF/fastener verdict and a red-team on the synthesis logic — broke §3's recommendation: the PVF operated desk is **sandwiched** (funded software above, commodity offshore labor below — the slot is vacant because it is unattractive), and the three-desk portfolio has **zero successful comparables** (every winner was monomaniacal for years). The corrected, fully-validated verdict is in **§6**: one desk — the division-order/land-administration transfer desk in minimum viable form — entered through discovery calls and paid concierge work, not an SLA pilot. Read §6 as the operative recommendation; §3 stands as the record of what validation corrected.
+
 **Date**: August 26, 2026
 **Classification**: Confidential — Internal Strategy / Board Use
 **Question**: Find a sustainable business, not a gimmick.
@@ -75,4 +77,30 @@ The strategy stack is complete and internally consistent: `FUTURE.md` (operate m
 
 ---
 
-*Adjudicated from: the UI-claims builder and breaker reports (August 26, 2026 — DOL/CBO/NASWA/Equifax/ADP primary sources), the four crown-jewel hostile validations, the four-perspective niche tournament, and the eight technical/GTM validation workstreams. All source URLs live in the underlying reports referenced throughout.*
+## 6. Final Validation Round — The Corrected Verdict (operative)
+
+Two last validators attacked this memo itself. Their findings, accepted:
+
+### 6.1 The PVF/fastener desk verdict: BROKEN — the sandwich
+
+The operated slot in industrial quoting is vacant the way the middle of a closing vise is vacant. **From above**: Canals, Faction, Hexa, Parspec ($31.5M, quoting+submittals, entering plumbing), MTR-extraction vendors already inside Epicor — and Epicor's own Prism agents now selling **outcome-based, pay-per-converted-RFQ pricing** (the thesis's pricing "innovation" is the ERP vendor's list price). **From below**: an entire missed industry of outsourced estimating firms doing piping/valve takeoffs at 24–48hr turnarounds and 50–60% below US labor cost, plus DistriOps — a 2,500-partner outsourcing network explicitly for MRO/bearings/fastener distributor back offices. The anchors also failed: the "300 reps at $1B" datapoint proves the *opposite* (given Faction's software, the distributor kept the desk and stopped hiring); the "days-long turnaround" was queue backlog, not work content (~1 hour of work per our own citation, now minutes); BoltWise has $6.5M, not nothing; TSARSI is one generic offshore staffing shop among dozens, not a category-proving precedent. Salvageable remnants only: a white-label exception layer sold *through* the AI vendors; bearings/PT vertical software; MTR/traceability compliance for the data-center/energy megaproject boom.
+
+### 6.2 The synthesis logic: corrected on all three claims
+
+- **"Accountability moat" — downgraded to table stakes.** SLA-plus-penalty terms are becoming the buyer's *default contractual demand* of every vendor; the accountability layer is now contested from above by the frontier labs themselves (Anthropic-backed Ode, $1.5B; OpenAI's Deployment Company, $4B+), from below by software vendors adding services, and from inside by clients insourcing at renewal. Correction data is real but is a **per-account switching cost, not a compounding flywheel** — each model generation resets the baseline. What actually retains customers in the evidence: operational embedding and channel trust, which take years and cannot be declared.
+- **The three-desk portfolio: dead.** Zero comparables ran multi-vertical portfolios at seed: Metropolis did parking-only for ~8 years; WarrCloud is still just warranty; Pace is still just insurance; Dili *pivoted* (killed desk one) rather than run two. The "one engine" is honestly ~⅓ of each desk — and it is the commoditizing third; the durable ⅔ (ontology, licenses, channels, exception taxonomy, trained teams) must be built per vertical. "Orthogonal cycles" is capital-allocator logic misapplied to a two-hand company. Desks two and three become a someday-list; expansion is a Series-A-scale decision.
+- **"Sign a paid pilot" — amended.** Right to stop analyzing; wrong instrument. A signed SLA pilot is the most expensive validation available and presumes the desk choice this round just overturned. The correct next artifact: **20–25 discovery calls in ONE vertical within 3 weeks → convert the two warmest into paid concierge engagements** (founder + fractional expert working real document batches for a fee, tooling behind the curtain). Two renewing concierge clients unlock the SLA pilot and resumed software hardening; failure to land two paid engagements in 60 days is the kill signal — at a cost of weeks, not quarters.
+
+### 6.3 The corrected recommendation — one desk, founder-shaped
+
+**Run the division-order / land-administration transfer desk, alone, in minimum viable form: founder + extraction/eval tooling + one fractional CDOA-certified contractor.** The founder-reality test inverts the old ranking: the PVF desk demanded a staffed, minutes-SLA ops team (the exact asset that doesn't exist) in the most software-contested market; the UI-claims desk demands hearing-rep armies against Equifax; the division-order desk is the only one whose work is **batchable, deadline-tolerant (week-scale), specialist-light (one fractional hire), and currently demand-flush** — the 2026 upstream M&A wave ($38B in Q1, a two-year high) generates ownership-transfer workload with every deal, *even as rig counts fall*, which repairs the cyclicality objection: the desk's demand driver is ownership-change events, not drilling activity. It also carries the modifications from its own earlier hostile round (§ per `docs/crown_jewel.md` 3.1): operator-paid per-file + retainer pricing, never a percentage of owner funds; audit-proof compliance framing; attorney-in-the-loop; the Texas PI license as cheap insurance.
+
+**The 60-day test**: NADOA-network discovery calls (the fractional CDOA as door-opener — the trust-and-referral culture is the honest bottleneck), two paid concierge engagements priced per completed transfer with a turnaround commitment, renewals as the go signal. Switching costs (correction data, embedding) engineered deliberately from day one — as retention insurance, not as a claimed moat.
+
+### 6.4 What ultimately survived the entire program
+
+After ~30 workstreams and eight adversarial rounds, four things withstood every attack: (1) **the operate model itself** — vendor-delivered, workflow-embedded, outcome-accountable AI is the 5% that works in MIT's data and where BPO procurement is heading; (2) **"built, not found"** — every vacancy claim broke, so position is accumulated, never discovered; (3) **the validation discipline** — builder/breaker pairs caught fatal errors in every single thesis, including this memo's; and (4) **one specific, modified, founder-shaped desk** with a 60-day, few-thousand-dollar test that ends the research phase for good.
+
+---
+
+*Adjudicated from: the UI-claims builder and breaker reports, the PVF-desk breaker, the synthesis red-team (August 26, 2026 — DOL/CBO/NASWA/Equifax/ADP/Faction/Canals/Epicor/MIT-NANDA primary sources), the four crown-jewel hostile validations, the four-perspective niche tournament, and the eight technical/GTM validation workstreams. All source URLs live in the underlying reports referenced throughout.*
