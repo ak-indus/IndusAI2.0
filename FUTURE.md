@@ -1,5 +1,7 @@
 # FUTURE — Mid-Market Thesis Recalibration
 
+> **⚠ AMENDED — August 26, 2026.** An eight-workstream validation pass (technical, GTM, demand, and a four-perspective niche tournament) superseded two load-bearing choices in this document: **(1) the chemicals-first beachhead is retired** — Datacor shipped agentic sales-order automation in its Winter 2026 release, absorbing the wedge this document assumed was open; chemicals demotes to a month-9+ re-entry at the compliance-exception layer. **(2) The primary motion is now the operated complex-quote/exception desk for PVF and fastener/bearing distributors** (with a time-boxed customs/trade-compliance challenger track), per `docs/niche_validation.md`. The operate model (§6), margin math, trust ladder, and capital posture stand; the engineering plan is amended by `docs/technical_validation.md` (notably: Postgres-first replaces the Neo4j serving path; connector order is now NetSuite/Eclipse → P21 → Datacor). The GTM execution plan lives in `docs/gtm_product_plan.md`. Year-one revenue target reset to $300–500K production revenue.
+
 **Date**: August 20, 2026
 **Classification**: Confidential — Internal Strategy / Board Use
 **Supersedes**: strategic direction in `docs/investor_memo.md`, `docs/gtm_strategy_targets.md` (March 2026). The March docs remain useful as history and target lists; where this document conflicts with them, this document wins.
